@@ -14,6 +14,7 @@ import QRCode from "react-native-qrcode-svg";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Snackbar } from "react-native-paper";
 import axios from "axios";
+import Sidebar from "../component/sidebar";
 
 export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -32,6 +33,11 @@ export default function HomeScreen() {
   const [meetingPercentage, setMeetingPercentage] = useState(0);
   const [facultyPercentage, setFacultyPercentage] = useState(0);
   const [OSPercentage, setOSPercentage] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   const handleSubmit = async () => {
     try {
@@ -92,22 +98,22 @@ export default function HomeScreen() {
     const today = new Date().toISOString().split("T")[0]; // Get today's date in "YYYY-MM-DD" format
     const todayEvents = schedules.filter((event) => event.date === today);
     const freeTimeEvents = todayEvents.filter(
-      (event) => event.status === "Free time"
+      (event) => event.status === "FREE TIME"
     );
     const percentage1 = (freeTimeEvents.length / todayEvents.length) * 100;
 
     const meetingEvents = todayEvents.filter(
-      (event) => event.status === "In Meeting"
+      (event) => event.status === "IN MEETING"
     );
     const percentage2 = (meetingEvents.length / todayEvents.length) * 100;
 
     const facultyEvents = todayEvents.filter(
-      (event) => event.status === "In Faculty"
+      (event) => event.status === "IN FACULTY"
     );
     const percentage3 = (facultyEvents.length / todayEvents.length) * 100;
 
     const OSEvents = todayEvents.filter(
-      (event) => event.status === "Outside School"
+      (event) => event.status === "OUTSIDE SCHOOL"
     );
     const percentage4 = (OSEvents.length / todayEvents.length) * 100;
 
@@ -125,7 +131,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconContainer}>
+        <TouchableOpacity style={styles.iconContainer}  onPress={toggleSidebar}>
           <Ionicons name="menu" size={24} color="white" />
         </TouchableOpacity>
         <View style={styles.rightIcons}>
@@ -137,6 +143,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} />
 
       <Text style={styles.label}>Categories</Text>
       <View style={styles.scrollView}>
