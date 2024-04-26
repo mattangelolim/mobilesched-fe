@@ -1,5 +1,5 @@
 // LoginScreen.js
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,14 +7,42 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
+import axios from "axios";
+import { Snackbar } from "react-native-paper";
 
 export default function LoginScreen({ navigation }) {
-  const handleLogin = () => {
-    // Implement your login logic here
-    // For simplicity, let's just navigate to the Home screen
-    navigation.navigate("Home");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [visible, setVisible] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post("http://3.26.19.203/login/user", {
+        username,
+        password,
+      });
+
+      if (response.status === 200) {
+        // Navigate to Home screen
+        setMessage("Login successful");
+        setVisible(true);
+        navigation.navigate("Home");
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Home" }],
+        });
+      } else {
+        // Display an alert
+        setMessage("Please check your login credentials");
+        setVisible(true);
+      }
+    } catch (error) {
+      setMessage("Please check your login credentials");
+      setVisible(true);
+      // console.error("Error:", error);
+    }
   };
-  
 
   return (
     <View style={styles.container}>
@@ -24,6 +52,8 @@ export default function LoginScreen({ navigation }) {
           style={styles.inputText}
           placeholder="Username"
           placeholderTextColor="#003f5c"
+          onChangeText={setUsername}
+          value={username}
         />
       </View>
       <View style={styles.inputView}>
@@ -32,6 +62,8 @@ export default function LoginScreen({ navigation }) {
           style={styles.inputText}
           placeholder="Password"
           placeholderTextColor="#003f5c"
+          value={password}
+          onChangeText={setPassword}
         />
       </View>
       <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
@@ -45,6 +77,13 @@ export default function LoginScreen({ navigation }) {
           Don't have an account? Register here
         </Text>
       </TouchableOpacity>
+      <Snackbar
+        visible={visible}
+        onDismiss={() => setVisible(false)}
+        duration={3000}
+      >
+        {message}
+      </Snackbar>
     </View>
   );
 }

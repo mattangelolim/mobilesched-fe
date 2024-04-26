@@ -1,5 +1,5 @@
 // HomeScreen.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   StyleSheet,
@@ -12,66 +12,115 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Snackbar } from "react-native-paper";
+import axios from "axios";
 
 export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [msgvisible, setMsgVisible] = useState(false);
+  const [message, setMessage] = useState("");
   const [status, setStatus] = useState("");
   const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState("");
+  const [professor, setProfessor] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [endTime, setEndTime] = useState("");
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeData, setQRCodeData] = useState("");
+  const [schedules, setSchedules] = useState([]);
+  const [freeTimePercentage, setFreeTimePercentage] = useState(0);
+  const [meetingPercentage, setMeetingPercentage] = useState(0);
+  const [facultyPercentage, setFacultyPercentage] = useState(0);
+  const [OSPercentage, setOSPercentage] = useState(0);
 
-  const dummyData = [
-    {
-      id: 1,
-      status: "In Meeting",
-      date: "2024-04-25",
-      start_time: "08:00:00",
-      end_time: "09:00:00",
-    },
-    {
-      id: 2,
-      status: "In Faculty",
-      date: "2024-04-25",
-      start_time: "10:00:00",
-      end_time: "11:30:00",
-    },
-    {
-      id: 3,
-      status: "Outside School",
-      date: "2024-04-25",
-      start_time: "13:00:00",
-      end_time: "14:30:00",
-    },
-    {
-      id: 4,
-      status: "Free time",
-      date: "2024-04-25",
-      start_time: "15:30:00",
-      end_time: "17:00:00",
-    },
-  ];
+  const handleSubmit = async () => {
+    try {
+      const response = await axios.post("http://3.26.19.203/create/schedule", {
+        status,
+        date: date.toISOString().split("T")[0],
+        start_time: startTime,
+        end_time: endTime,
+        professor,
+      });
+
+      console.log(response);
+      if (response.status === 201) {
+        // Schedule created successfully, you can handle further actions here
+        console.log("Schedule created successfully");
+        setModalVisible(false);
+        fetchData();
+        calculateFreeTimePercentage();
+      } else {
+        // console.error("Failed to create schedule");
+        setMessage("Failed to create schedule");
+        setMsgVisible(true);
+      }
+    } catch (error) {
+      setMessage("Failed to create schedule");
+      setMsgVisible(true);
+      console.error("Error:", error);
+    }
+  };
+
+  useEffect(() => {
+    calculateFreeTimePercentage();
+  }, [schedules]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get("http://3.26.19.203/all/schedules");
+      if (response.status === 200) {
+        setSchedules(response.data);
+      } else {
+        console.error("Failed to fetch data");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
 
   const today = new Date().toISOString().split("T")[0];
 
   // Filter dummyData for events with the same date as today
-  const todayEvents = dummyData.filter((event) => event.date === today);
+  const todayEvents = schedules.filter((event) => event.date === today);
 
-  const handleSubmit = () => {
-    // Handle form submission logic here
-    // For example, you can submit the form data to your backend
-    // and close the modal
-    setModalVisible(false);
+  const calculateFreeTimePercentage = () => {
+    const today = new Date().toISOString().split("T")[0]; // Get today's date in "YYYY-MM-DD" format
+    const todayEvents = schedules.filter((event) => event.date === today);
+    const freeTimeEvents = todayEvents.filter(
+      (event) => event.status === "Free time"
+    );
+    const percentage1 = (freeTimeEvents.length / todayEvents.length) * 100;
+
+    const meetingEvents = todayEvents.filter(
+      (event) => event.status === "In Meeting"
+    );
+    const percentage2 = (meetingEvents.length / todayEvents.length) * 100;
+
+    const facultyEvents = todayEvents.filter(
+      (event) => event.status === "In Faculty"
+    );
+    const percentage3 = (facultyEvents.length / todayEvents.length) * 100;
+
+    const OSEvents = todayEvents.filter(
+      (event) => event.status === "Outside School"
+    );
+    const percentage4 = (OSEvents.length / todayEvents.length) * 100;
+
+    setFreeTimePercentage(percentage1.toFixed(2));
+    setMeetingPercentage(percentage2.toFixed(2));
+    setFacultyPercentage(percentage3.toFixed(2));
+    setOSPercentage(percentage4.toFixed(2));
   };
 
   const handleOpenQRCode = (eventId) => {
-    // console.log(eventId)
     setQRCodeData(eventId.toString());
     setShowQRModal(true);
   };
-  console.log(qrCodeData);
 
   return (
     <View style={styles.container}>
@@ -100,28 +149,36 @@ export default function HomeScreen() {
             <Text style={styles.boxLabel}>Schedule</Text>
             <Text style={styles.subLabel}>In Meeting</Text>
             <View style={styles.progressBar}>
-              <View style={[styles.progress, { width: "50%" }]}></View>
+              <View
+                style={[styles.progress, { width: `${meetingPercentage}%` }]}
+              ></View>
             </View>
           </View>
           <View style={[styles.box, { height: 120 }]}>
             <Text style={styles.boxLabel}>Schedule</Text>
             <Text style={styles.subLabel}>In Faculty</Text>
             <View style={styles.progressBar}>
-              <View style={[styles.progress, { width: "20%" }]}></View>
+              <View
+                style={[styles.progress, { width: `${facultyPercentage}%` }]}
+              ></View>
             </View>
           </View>
           <View style={[styles.box, { height: 120 }]}>
             <Text style={styles.boxLabel}>Schedule</Text>
             <Text style={styles.subLabel}>Outside School</Text>
             <View style={styles.progressBar}>
-              <View style={[styles.progress, { width: "30%" }]}></View>
+              <View
+                style={[styles.progress, { width: `${OSPercentage}%` }]}
+              ></View>
             </View>
           </View>
           <View style={[styles.box, { height: 120 }]}>
             <Text style={styles.boxLabel}>Schedule</Text>
             <Text style={styles.subLabel}>Free Time</Text>
             <View style={styles.progressBar}>
-              <View style={[styles.progress, { width: "10%" }]}></View>
+              <View
+                style={[styles.progress, { width: `${freeTimePercentage}%` }]}
+              ></View>
             </View>
           </View>
         </ScrollView>
@@ -149,6 +206,7 @@ export default function HomeScreen() {
                 </Text>
                 <Text>Start Time: {event.start_time}</Text>
                 <Text>End Time: {event.end_time}</Text>
+                <Text>Professor: {event.professor}</Text>
               </TouchableOpacity>
             ))
           ) : (
@@ -205,9 +263,8 @@ export default function HomeScreen() {
                 mode="date"
                 display="default"
                 onChange={(event, selectedDate) => {
-                  setShowDatePicker(false); // Hide date picker after selection
-                  const currentDate = selectedDate || date;
-                  setDate(currentDate);
+                  setShowDatePicker(false);
+                  setDate(selectedDate);
                 }}
               />
             )}
@@ -224,6 +281,12 @@ export default function HomeScreen() {
               placeholder="End Time (use military time format)"
               value={endTime}
               onChangeText={(text) => setEndTime(text)}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Professor's name"
+              value={professor}
+              onChangeText={(text) => setProfessor(text)}
             />
             {/* Submit Button */}
             <TouchableOpacity
@@ -251,6 +314,13 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+      <Snackbar
+        visible={msgvisible}
+        onDismiss={() => setMsgVisible(false)}
+        duration={3000}
+      >
+        {message}
+      </Snackbar>
     </View>
   );
 }
@@ -352,7 +422,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "white",
-    height: "70%",
+    height: "75%",
     width: "80%",
     padding: 20,
     borderRadius: 10,
@@ -391,7 +461,7 @@ const styles = StyleSheet.create({
     right: 10,
   },
   eventContainer: {
-    maxHeight: "30%",
+    maxHeight: "100%",
     marginTop: 10,
     padding: 10,
     backgroundColor: "white",

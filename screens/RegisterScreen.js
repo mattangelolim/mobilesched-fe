@@ -1,5 +1,5 @@
 // RegisterScreen.js
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,11 +7,37 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
+import { Snackbar } from "react-native-paper";
+import axios from "axios";
 
 export default function RegisterScreen({ navigation }) {
-  const handleRegister = () => {
-    // Implement your registration logic here
-    navigation.goBack();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [visible, setVisible] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleRegister = async () => {
+    try {
+      const response = await axios.post("http://3.26.19.203/register/user", {
+        name,
+        email,
+        username,
+        password,
+      });
+
+      if (response.status === 200) {
+        navigation.goBack();
+      } else {
+        setMessage("Registration failed, please check your inputs.");
+        setVisible(true);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("Registration failed, please check your inputs.");
+      setVisible(true);
+    }
   };
 
   return (
@@ -22,6 +48,8 @@ export default function RegisterScreen({ navigation }) {
           style={styles.inputText}
           placeholder="Name"
           placeholderTextColor="#003f5c"
+          value={name}
+          onChangeText={setName}
         />
       </View>
       <View style={styles.inputView}>
@@ -30,6 +58,8 @@ export default function RegisterScreen({ navigation }) {
           placeholder="Email"
           placeholderTextColor="#003f5c"
           keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
       </View>
       <View style={styles.inputView}>
@@ -37,6 +67,8 @@ export default function RegisterScreen({ navigation }) {
           style={styles.inputText}
           placeholder="Username"
           placeholderTextColor="#003f5c"
+          value={username}
+          onChangeText={setUsername}
         />
       </View>
       <View style={styles.inputView}>
@@ -45,11 +77,20 @@ export default function RegisterScreen({ navigation }) {
           secureTextEntry
           placeholder="Password"
           placeholderTextColor="#003f5c"
+          value={password}
+          onChangeText={setPassword}
         />
       </View>
       <TouchableOpacity style={styles.registerBtn} onPress={handleRegister}>
         <Text style={styles.registerText}>REGISTER</Text>
       </TouchableOpacity>
+      <Snackbar
+        visible={visible}
+        onDismiss={() => setVisible(false)}
+        duration={3000}
+      >
+        {message}
+      </Snackbar>
     </View>
   );
 }
