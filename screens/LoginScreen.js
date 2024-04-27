@@ -27,6 +27,7 @@ export default function LoginScreen({ navigation }) {
         // Navigate to Home screen
         setMessage("Login successful");
         setVisible(true);
+        
         navigation.navigate("Home");
         navigation.reset({
           index: 0,

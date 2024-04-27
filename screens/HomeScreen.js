@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useNavigation } from "@react-navigation/native";
 import { Snackbar } from "react-native-paper";
 import axios from "axios";
 import Sidebar from "../component/sidebar";
@@ -32,8 +33,11 @@ export default function HomeScreen() {
   const [freeTimePercentage, setFreeTimePercentage] = useState(0);
   const [meetingPercentage, setMeetingPercentage] = useState(0);
   const [facultyPercentage, setFacultyPercentage] = useState(0);
+  const [WFHPercentage, setWFHPercentage] = useState(0);
   const [OSPercentage, setOSPercentage] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const navigation = useNavigation();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -78,7 +82,7 @@ export default function HomeScreen() {
 
   const fetchData = async () => {
     try {
-      const response = await axios.get("http://3.26.19.203/all/schedules");
+      const response = await axios.get("http://3.26.19.203/today/schedules");
       if (response.status === 200) {
         setSchedules(response.data);
       } else {
@@ -117,10 +121,16 @@ export default function HomeScreen() {
     );
     const percentage4 = (OSEvents.length / todayEvents.length) * 100;
 
+    const WFHEvents = todayEvents.filter(
+      (event) => event.status === "WORK FROM HOME"
+    );
+    const percentage5 = (WFHEvents.length / todayEvents.length) * 100;
+
     setFreeTimePercentage(percentage1.toFixed(2));
     setMeetingPercentage(percentage2.toFixed(2));
     setFacultyPercentage(percentage3.toFixed(2));
     setOSPercentage(percentage4.toFixed(2));
+    setWFHPercentage(percentage5.toFixed(2));
   };
 
   const handleOpenQRCode = (eventId) => {
@@ -131,7 +141,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconContainer}  onPress={toggleSidebar}>
+        <TouchableOpacity style={styles.iconContainer} onPress={toggleSidebar}>
           <Ionicons name="menu" size={24} color="white" />
         </TouchableOpacity>
         <View style={styles.rightIcons}>
@@ -143,7 +153,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={toggleSidebar}
+        navigation={navigation}
+      />
 
       <Text style={styles.label}>Categories</Text>
       <View style={styles.scrollView}>
@@ -181,6 +195,15 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.box, { height: 120 }]}>
             <Text style={styles.boxLabel}>Schedule</Text>
+            <Text style={styles.subLabel}>Work from home</Text>
+            <View style={styles.progressBar}>
+              <View
+                style={[styles.progress, { width: `${WFHPercentage}%` }]}
+              ></View>
+            </View>
+          </View>
+          <View style={[styles.box, { height: 120 }]}>
+            <Text style={styles.boxLabel}>Schedule</Text>
             <Text style={styles.subLabel}>Free Time</Text>
             <View style={styles.progressBar}>
               <View
@@ -200,7 +223,12 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={event.id}
                 style={styles.eventContainer}
-                onPress={() => handleOpenQRCode(event.id)}
+                onPress={() => {
+                  if (event.status !== "WORK FROM HOME") {
+                    handleOpenQRCode(event.id);
+                  }
+                }}
+                disabled={event.status === "WORK FROM HOME"}
               >
                 <Text style={styles.eventStatus}>{event.status}</Text>
                 <Text style={styles.eventDate}>
