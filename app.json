@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "testMobile",
-    "slug": "testMobile",
+    "name": "IOE Mobile",
+    "slug": "IOE-Mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,10 +21,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.android"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "01ef2553-f3ee-4aa6-9e6e-f2cea207b76a"
+      }
     }
   }
 }

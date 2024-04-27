@@ -1,5 +1,6 @@
 // HomeScreen.js
 import React, { useState, useEffect } from "react";
+import * as Svg from 'react-native-svg';
 import {
   Modal,
   StyleSheet,
@@ -341,8 +342,8 @@ export default function HomeScreen() {
       >
         <TouchableOpacity
           style={styles.modalContainer}
-          activeOpacity={1} // Prevents the modal from closing immediately when touched
-          onPress={() => setShowQRModal(false)} // Close the modal when the background is pressed
+          activeOpacity={1} 
+          onPress={() => setShowQRModal(false)} 
         >
           <View style={styles.qrModalContent}>
             <QRCode value={qrCodeData} size={200} />
