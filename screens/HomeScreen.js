@@ -1,31 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList, TextInput } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Calendar } from 'react-native-calendars';
-import moment from "moment"
-
-const events = [
-  { day: 'Monday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 1' },
-  { day: 'Monday', start_time: '03:00:00', end_time: '04:00:00', description: 'Lorem ipsum 2' },
-  { day: 'Monday', start_time: '03:00:00', end_time: '04:00:00', description: 'Lorem ipsum 2' },
-  { day: 'Tuesday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 3' },
-  { day: 'Wednesday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 4' },
-  { day: 'Wednesday', start_time: '03:00:00', end_time: '04:00:00', description: 'Lorem ipsum 5' },
-  { day: 'Friday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 6' },
-  { day: 'Saturday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 7' }
-];
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Button,
+  StyleSheet,
+  Modal,
+  FlatList,
+  TextInput,
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { Calendar } from "react-native-calendars";
+import moment from "moment";
+import axios from "axios";
+import { Snackbar } from "react-native-paper";
+import QRCode from "react-native-qrcode-svg";
+import Sidebar from "../component/sidebar";
+import { useNavigation } from "@react-navigation/native";
 
 const CalendarEvent = ({ day, schedules }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const displaySchedules = schedules.slice(0, 1); // Limit to first 2 schedules
-  const moreSchedules = schedules.length > 1;
+  const displaySchedules = schedules.slice(0, 2);
+  const moreSchedules = schedules.length > 2;
 
   return (
     <View style={styles.eventContainer}>
       {/* <Text>{day}</Text> */}
       {displaySchedules.map((schedule, index) => (
         <TouchableOpacity key={index} onPress={() => setModalVisible(true)}>
-          <Text>{`${schedule.start_time} - ${schedule.end_time}: ${schedule.description}`}</Text>
+          <Text>
+            <Text style={styles.descriptionText}>{schedule.description} |</Text>
+            {` ${schedule.start_time} - ${schedule.end_time}`}
+          </Text>
         </TouchableOpacity>
       ))}
       {moreSchedules && (
@@ -46,11 +52,19 @@ const CalendarEvent = ({ day, schedules }) => {
             <FlatList
               data={schedules}
               renderItem={({ item }) => (
-                <Text>{`${item.start_time} - ${item.end_time}: ${item.description}`}</Text>
+                <Text>
+                  <Text style={styles.descriptionText}>
+                    {item.description} |
+                  </Text>
+                  {` ${item.start_time} - ${item.end_time}`}
+                </Text>
               )}
               keyExtractor={(item, index) => index.toString()}
             />
-            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -60,32 +74,113 @@ const CalendarEvent = ({ day, schedules }) => {
   );
 };
 
-const CalendarScreen = () => {
+const HomeScreen = () => {
+  const [visible, setVisible] = useState(false);
+  const [message, setMessage] = useState("");
 
   const [showCalendar, setShowCalendar] = useState(false);
   const [markedDates, setMarkedDates] = useState({});
   const [modalVisible, setModalVisible] = useState(false);
-  const [status, setStatus] = useState("");
+  // const [status, setStatus] = useState("");
+  const [number, setNumber] = useState("");
+  const [availableSem, setAvailableSem] = useState(null);
+  const options = { month: "long", day: "2-digit", year: "numeric" };
+
+  const [events, setEvents] = useState([]);
+
   const [day, setDay] = useState("");
   const [startTime, setStartTime] = useState("");
-  const [professor, setProfessor] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [professor, setProfessor] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [QRValue, setQrValue] = useState("");
+  const [modalQRVisible, setModalQRVisible] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const navigation = useNavigation();
+
+  const handleQRCodePress = (code) => {
+    setQrValue(code);
+    setModalQRVisible(true);
+  };
+
+  useEffect(() => {
+    fetchData();
+    checkAvailableSem();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get("http://3.26.19.203/set/schedules");
+      setEvents(response.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+  const checkAvailableSem = async () => {
+    try {
+      const response = await axios.get("http://3.26.19.203/check/sem/range");
+      setAvailableSem(response.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const response = await axios.post("http://3.26.19.203/create/schedule", {
+        day,
+        start_time: startTime,
+        end_time: endTime,
+        professor,
+        description,
+      });
+      if (response.status === 200) {
+        setModalVisible(false);
+        setMessage("Schedule Created Successful");
+        setVisible(true);
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error submitting:", error);
+    }
+  };
+
+  const handleInputChange = (text) => {
+    if (/^\d+$/.test(text) || text === "") {
+      setNumber(text);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await axios.post("http://3.26.19.203/set/sem/range", {
+        number,
+      });
+      if (response.status === 200) {
+        setMessage("Semester Range Set Successful");
+        setVisible(true);
+        checkAvailableSem();
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
 
   useEffect(() => {
     const markDates = () => {
       const newMarkedDates = {};
-
-      events.forEach(event => {
-        const currentDate = moment().startOf('month');
+      events.forEach((event) => {
+        const currentDate = moment().startOf("month");
 
         while (currentDate.month() === moment().month()) {
-          if (currentDate.format('dddd') === event.day) {
-            newMarkedDates[currentDate.format('YYYY-MM-DD')] = { marked: true };
+          if (currentDate.format("dddd") === event.day) {
+            newMarkedDates[currentDate.format("YYYY-MM-DD")] = { marked: true };
           }
-          currentDate.add(1, 'day');
+          currentDate.add(1, "day");
         }
       });
-
       setMarkedDates(newMarkedDates);
     };
 
@@ -97,25 +192,24 @@ const CalendarScreen = () => {
   };
 
   const toggleSidebar = () => {
-    // Implement your toggleSidebar function
+    setIsSidebarOpen(!isSidebarOpen);
   };
   const groupedEvents = {};
 
   // Group events by day
-  events.forEach(event => {
+  events.forEach((event) => {
     if (!groupedEvents[event.day]) {
       groupedEvents[event.day] = [];
     }
     groupedEvents[event.day].push(event);
   });
 
-  // Helper function to get the dates for each day of the current week
   const getCurrentWeekDates = () => {
-    const weekStart = moment().startOf('week'); // Start of current week
+    const weekStart = moment().startOf("week");
     const dates = [];
 
     for (let i = 0; i < 7; i++) {
-      dates.push(weekStart.clone().add(i, 'days').format('YYYY-MM-DD'));
+      dates.push(weekStart.clone().add(i, "days").format("YYYY-MM-DD"));
     }
 
     return dates;
@@ -123,13 +217,16 @@ const CalendarScreen = () => {
 
   return (
     <View style={styles.container}>
+    
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconContainer} onPress={toggleSidebar}>
           <Ionicons name="menu" size={24} color="white" />
         </TouchableOpacity>
-
         <View style={styles.rightIcons}>
-          <TouchableOpacity style={styles.iconContainer} onPress={toggleCalendar}>
+          <TouchableOpacity
+            style={styles.iconContainer}
+            onPress={toggleCalendar}
+          >
             <Ionicons name="calendar" size={24} color="white" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconContainer}>
@@ -145,26 +242,73 @@ const CalendarScreen = () => {
           <Calendar markedDates={markedDates} />
         </View>
       )}
-      <View>
-        <Text>How many days is this semester?</Text>
-        <View style={styles.maincont}>
+      <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} navigation={navigation} />
+      <View style={styles.maincont2}>
+        {!availableSem ? (
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.inputDays}
+              placeholder="no of days this sem?"
+              value={number}
+              onChangeText={handleInputChange}
+              keyboardType="numeric"
+            />
+            <TouchableOpacity onPress={handleSave}>
+              <Text style={styles.saveButton}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.dateRanges}>
+            <View style={styles.dateContainer2}>
+              <Text style={styles.dateText}>
+                {new Date(availableSem.startDate).toLocaleDateString(
+                  undefined,
+                  options
+                )}
+              </Text>
+              <Text style={styles.dateText}>TO</Text>
+              <Text style={styles.dateText2}>
+                {new Date(availableSem.endDate).toLocaleDateString(
+                  undefined,
+                  options
+                )}
+              </Text>
+            </View>
+            <View style={styles.QrContainer}>
+              <Text style={styles.dateTitle}>Semester Range</Text>
+              <TouchableOpacity
+                onPress={() => handleQRCodePress(availableSem.code)}
+              >
+                <Ionicons name="qr-code-outline" size={24} color="black" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
+        <View style={styles.maincont}>
           <View style={styles.dateContainer}>
             {getCurrentWeekDates().map((date, index) => (
               <View key={index} style={styles.dateItem}>
-                <Text style={styles.dateLabel}>{moment(date).format('ddd')}</Text>
-                <Text>{moment(date).format('MMM DD')}</Text>
+                <Text style={styles.dateLabel}>
+                  {moment(date).format("ddd")}
+                </Text>
+                <Text>{moment(date).format("MMM DD")}</Text>
               </View>
             ))}
-
           </View>
           <View style={styles.eventsContainer}>
             {getCurrentWeekDates().map((date, index) => (
-              <CalendarEvent key={index} schedules={events.filter(event => event.day === moment(date).format('dddd'))} />
+              <CalendarEvent
+                key={index}
+                schedules={events.filter(
+                  (event) => event.day === moment(date).format("dddd")
+                )}
+              />
             ))}
           </View>
         </View>
       </View>
+
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => setModalVisible(true)}
@@ -194,7 +338,7 @@ const CalendarScreen = () => {
               style={styles.input}
               placeholder="Input day of the scheule"
               value={day}
-              onChangeText={(text) => setStartTime(text)}
+              onChangeText={(text) => setDay(text)}
             />
 
             {/* Start Time Input */}
@@ -217,10 +361,16 @@ const CalendarScreen = () => {
               value={professor}
               onChangeText={(text) => setProfessor(text)}
             />
+            <TextInput
+              style={styles.input}
+              placeholder="Subject Description"
+              value={description}
+              onChangeText={(text) => setDescription(text)}
+            />
             {/* Submit Button */}
             <TouchableOpacity
               style={styles.submitButton}
-            // onPress={handleSubmit}
+              onPress={handleSubmit}
             >
               <Text style={styles.submitButtonText}>Submit</Text>
             </TouchableOpacity>
@@ -228,62 +378,119 @@ const CalendarScreen = () => {
         </View>
       </Modal>
 
+      {/* QR CODE MODAL */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalQRVisible}
+        onRequestClose={() => setModalQRVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <QRCode value={QRValue} size={200} />
+            <TouchableOpacity
+              style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
+              onPress={() => setModalQRVisible(false)}
+            >
+              <Text style={styles.textStyle}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* SNACK BAR FOR MESSAGE POP UP */}
+      <Snackbar
+        visible={visible}
+        onDismiss={() => setVisible(false)}
+        duration={3000}
+      >
+        {message}
+      </Snackbar>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
-  maincont: {
-    flexDirection: 'row',
+  maincont2: {
+    flexDirection: "column",
     justifyContent: "center",
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
     alignItems: "center",
     borderRadius: 10,
-    overflow: 'scroll',
+    overflow: "scroll",
+  },
+  maincont: {
+    height: "90%",
+    flexDirection: "row",
+    justifyContent: "center",
+    backgroundColor: "#f2f2f2",
+    alignItems: "center",
+    borderRadius: 10,
   },
   dateContainer: {
-    flexDirection: 'column',
-    width: '20%',
+    flexDirection: "column",
+    width: "20%",
     height: "100%",
     borderRightWidth: 1,
-    borderRightColor: '#ddd',
+    borderRightColor: "#ddd",
     padding: 5,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   dateItem: {
-    height: "10%",
-    borderColor: 'black',
-    borderWidth: 1,
-    alignItems: 'center',
+    height: 80,
+    borderColor: "transparent",
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    alignItems: "center",
     padding: 2,
     marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 5,
   },
   dateLabel: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 5,
   },
   eventsContainer: {
-    flexDirection: 'column',
+    flexDirection: "column",
     height: "100%",
     flex: 1,
     padding: 5,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   eventContainer: {
-    height: "10%",
+    height: 80,
     marginBottom: 10,
-    padding: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    backgroundColor: '#fafafa',
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  descriptionText: {
+    fontWeight: "bold",
   },
   iconContainer: {
     padding: 10,
@@ -292,7 +499,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   rightIcons: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   calendarContainer: {
     marginBottom: 20,
@@ -314,28 +521,28 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     padding: 20,
     borderRadius: 10,
-    width: '80%',
-    maxHeight: '80%',
+    width: "80%",
+    maxHeight: "80%",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
   },
   closeButton: {
     marginTop: 20,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
   },
   closeButtonText: {
-    color: 'blue',
+    color: "blue",
   },
   addButton: {
     position: "absolute",
@@ -388,7 +595,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   submitButton: {
-    backgroundColor: "blue",
+    backgroundColor: "#9AC8CD",
     padding: 10,
     marginTop: 10,
     borderRadius: 5,
@@ -403,6 +610,110 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
   },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  inputDays: {
+    borderColor: "black",
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+    padding: 5,
+    backgroundColor: "white",
+    borderWidth: 0.5,
+    color: "#003f5c",
+  },
+  saveButton: {
+    padding: 10,
+    borderColor: "black",
+    backgroundColor: "#003f5c",
+    color: "white",
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+  },
+  dateContainer2: {
+    flexDirection: "row",
+    marginTop: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dateTitle: {
+    fontSize: 20,
+    backgroundColor: "#FF8A08",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontWeight: "bold",
+    marginTop: 2,
+    marginBottom: 10,
+    marginRight: 5,
+    borderColor: "#FFC966",
+    borderWidth: 2,
+    borderRadius: 20,
+  },
+  dateText: {
+    fontFamily: "Roboto",
+    fontSize: 16,
+    paddingVertical: 4,
+    marginHorizontal: 4,
+    backgroundColor: "#F3F3F3",
+
+    borderRadius: 8,
+  },
+  dateText2: {
+    fontFamily: "Roboto",
+    fontSize: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    marginHorizontal: 4,
+    backgroundColor: "orange",
+    borderRadius: 8,
+  },
+  dateRanges: {
+    flexDirection: "column",
+  },
+  QrContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  centeredView: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 22,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  openButton: {
+    backgroundColor: "#F194FF",
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  textStyle: {
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: "center",
+  },
 });
 
-export default CalendarScreen;
+export default HomeScreen;

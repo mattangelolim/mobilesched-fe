@@ -18,26 +18,37 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     try {
-      // const response = await axios.post("http://3.26.19.203/login/user", {
-      //   username,
-      //   password,
-      // });
+      const response = await axios.post("http://3.26.19.203/login/user", {
+        username,
+        password,
+      });
+      console.log();
 
-      // if (response.status === 200) {
-      //   // Navigate to Home screen
-      //   setMessage("Login successful");
-      //   setVisible(true);
-        
-        navigation.navigate("Home");
-      //   navigation.reset({
-      //     index: 0,
-      //     routes: [{ name: "Home" }],
-      //   });
-      // } else {
-      //   // Display an alert
-      //   setMessage("Please check your login credentials");
-      //   setVisible(true);
-      // }
+      if (response.status === 200) {
+        // Navigate to Home screen
+        if (response.data.loginUser.user_type === "Professor") {
+          setMessage("Login successful");
+          setVisible(true);
+
+          navigation.navigate("Home");
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Home" }],
+          });
+        } else {
+          setMessage("Login successful");
+          setVisible(true);
+          navigation.navigate("StudentHome");
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "StudentHome" }],
+          });
+        }
+      } else {
+        // Display an alert
+        setMessage("Please check your login credentials");
+        setVisible(true);
+      }
     } catch (error) {
       setMessage("Please check your login credentials");
       setVisible(true);
