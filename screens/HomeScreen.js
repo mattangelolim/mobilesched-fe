@@ -1,142 +1,124 @@
-// HomeScreen.js
-import React, { useState, useEffect } from "react";
-import * as Svg from 'react-native-svg';
-import {
-  Modal,
-  StyleSheet,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import QRCode from "react-native-qrcode-svg";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useNavigation } from "@react-navigation/native";
-import { Snackbar } from "react-native-paper";
-import axios from "axios";
-import Sidebar from "../component/sidebar";
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList, TextInput } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Calendar } from 'react-native-calendars';
+import moment from "moment"
 
-export default function HomeScreen() {
+const events = [
+  { day: 'Monday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 1' },
+  { day: 'Monday', start_time: '03:00:00', end_time: '04:00:00', description: 'Lorem ipsum 2' },
+  { day: 'Monday', start_time: '03:00:00', end_time: '04:00:00', description: 'Lorem ipsum 2' },
+  { day: 'Tuesday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 3' },
+  { day: 'Wednesday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 4' },
+  { day: 'Wednesday', start_time: '03:00:00', end_time: '04:00:00', description: 'Lorem ipsum 5' },
+  { day: 'Friday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 6' },
+  { day: 'Saturday', start_time: '01:00:00', end_time: '02:00:00', description: 'Lorem ipsum 7' }
+];
+
+const CalendarEvent = ({ day, schedules }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [msgvisible, setMsgVisible] = useState(false);
-  const [message, setMessage] = useState("");
+  const displaySchedules = schedules.slice(0, 1); // Limit to first 2 schedules
+  const moreSchedules = schedules.length > 1;
+
+  return (
+    <View style={styles.eventContainer}>
+      {/* <Text>{day}</Text> */}
+      {displaySchedules.map((schedule, index) => (
+        <TouchableOpacity key={index} onPress={() => setModalVisible(true)}>
+          <Text>{`${schedule.start_time} - ${schedule.end_time}: ${schedule.description}`}</Text>
+        </TouchableOpacity>
+      ))}
+      {moreSchedules && (
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Text style={styles.seeMoreText}>See more</Text>
+        </TouchableOpacity>
+      )}
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Schedules</Text>
+            <FlatList
+              data={schedules}
+              renderItem={({ item }) => (
+                <Text>{`${item.start_time} - ${item.end_time}: ${item.description}`}</Text>
+              )}
+              keyExtractor={(item, index) => index.toString()}
+            />
+            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const CalendarScreen = () => {
+
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [markedDates, setMarkedDates] = useState({});
+  const [modalVisible, setModalVisible] = useState(false);
   const [status, setStatus] = useState("");
-  const [date, setDate] = useState(new Date());
+  const [day, setDay] = useState("");
   const [startTime, setStartTime] = useState("");
   const [professor, setProfessor] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [endTime, setEndTime] = useState("");
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [qrCodeData, setQRCodeData] = useState("");
-  const [schedules, setSchedules] = useState([]);
-  const [freeTimePercentage, setFreeTimePercentage] = useState(0);
-  const [meetingPercentage, setMeetingPercentage] = useState(0);
-  const [facultyPercentage, setFacultyPercentage] = useState(0);
-  const [WFHPercentage, setWFHPercentage] = useState(0);
-  const [OSPercentage, setOSPercentage] = useState(0);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const navigation = useNavigation();
+  useEffect(() => {
+    const markDates = () => {
+      const newMarkedDates = {};
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+      events.forEach(event => {
+        const currentDate = moment().startOf('month');
 
-  const handleSubmit = async () => {
-    try {
-      const response = await axios.post("http://3.26.19.203/create/schedule", {
-        status,
-        date: date.toISOString().split("T")[0],
-        start_time: startTime,
-        end_time: endTime,
-        professor,
+        while (currentDate.month() === moment().month()) {
+          if (currentDate.format('dddd') === event.day) {
+            newMarkedDates[currentDate.format('YYYY-MM-DD')] = { marked: true };
+          }
+          currentDate.add(1, 'day');
+        }
       });
 
-      console.log(response);
-      if (response.status === 201) {
-        // Schedule created successfully, you can handle further actions here
-        console.log("Schedule created successfully");
-        setModalVisible(false);
-        fetchData();
-        calculateFreeTimePercentage();
-      } else {
-        // console.error("Failed to create schedule");
-        setMessage("Failed to create schedule");
-        setMsgVisible(true);
-      }
-    } catch (error) {
-      setMessage("Failed to create schedule");
-      setMsgVisible(true);
-      console.error("Error:", error);
-    }
-  };
+      setMarkedDates(newMarkedDates);
+    };
 
-  useEffect(() => {
-    calculateFreeTimePercentage();
-  }, [schedules]);
-
-  useEffect(() => {
-    fetchData();
+    markDates();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const response = await axios.get("http://3.26.19.203/today/schedules");
-      if (response.status === 200) {
-        setSchedules(response.data);
-      } else {
-        console.error("Failed to fetch data");
-      }
-    } catch (error) {
-      console.error("Error:", error);
+  const toggleCalendar = () => {
+    setShowCalendar(!showCalendar);
+  };
+
+  const toggleSidebar = () => {
+    // Implement your toggleSidebar function
+  };
+  const groupedEvents = {};
+
+  // Group events by day
+  events.forEach(event => {
+    if (!groupedEvents[event.day]) {
+      groupedEvents[event.day] = [];
     }
-  };
+    groupedEvents[event.day].push(event);
+  });
 
-  const today = new Date().toISOString().split("T")[0];
+  // Helper function to get the dates for each day of the current week
+  const getCurrentWeekDates = () => {
+    const weekStart = moment().startOf('week'); // Start of current week
+    const dates = [];
 
-  // Filter dummyData for events with the same date as today
-  const todayEvents = schedules.filter((event) => event.date === today);
+    for (let i = 0; i < 7; i++) {
+      dates.push(weekStart.clone().add(i, 'days').format('YYYY-MM-DD'));
+    }
 
-  const calculateFreeTimePercentage = () => {
-    const today = new Date().toISOString().split("T")[0]; // Get today's date in "YYYY-MM-DD" format
-    const todayEvents = schedules.filter((event) => event.date === today);
-    const freeTimeEvents = todayEvents.filter(
-      (event) => event.status === "FREE TIME"
-    );
-    const percentage1 = (freeTimeEvents.length / todayEvents.length) * 100;
-
-    const meetingEvents = todayEvents.filter(
-      (event) => event.status === "IN MEETING"
-    );
-    const percentage2 = (meetingEvents.length / todayEvents.length) * 100;
-
-    const facultyEvents = todayEvents.filter(
-      (event) => event.status === "IN FACULTY"
-    );
-    const percentage3 = (facultyEvents.length / todayEvents.length) * 100;
-
-    const OSEvents = todayEvents.filter(
-      (event) => event.status === "OUTSIDE SCHOOL"
-    );
-    const percentage4 = (OSEvents.length / todayEvents.length) * 100;
-
-    const WFHEvents = todayEvents.filter(
-      (event) => event.status === "WORK FROM HOME"
-    );
-    const percentage5 = (WFHEvents.length / todayEvents.length) * 100;
-
-    setFreeTimePercentage(percentage1.toFixed(2));
-    setMeetingPercentage(percentage2.toFixed(2));
-    setFacultyPercentage(percentage3.toFixed(2));
-    setOSPercentage(percentage4.toFixed(2));
-    setWFHPercentage(percentage5.toFixed(2));
-  };
-
-  const handleOpenQRCode = (eventId) => {
-    setQRCodeData(eventId.toString());
-    setShowQRModal(true);
+    return dates;
   };
 
   return (
@@ -145,7 +127,11 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.iconContainer} onPress={toggleSidebar}>
           <Ionicons name="menu" size={24} color="white" />
         </TouchableOpacity>
+
         <View style={styles.rightIcons}>
+          <TouchableOpacity style={styles.iconContainer} onPress={toggleCalendar}>
+            <Ionicons name="calendar" size={24} color="white" />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.iconContainer}>
             <Ionicons name="search" size={24} color="white" />
           </TouchableOpacity>
@@ -154,104 +140,31 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={toggleSidebar}
-        navigation={navigation}
-      />
+      {showCalendar && (
+        <View style={styles.calendarContainer}>
+          <Calendar markedDates={markedDates} />
+        </View>
+      )}
+      <View>
+        <Text>How many days is this semester?</Text>
+        <View style={styles.maincont}>
 
-      <Text style={styles.label}>Categories</Text>
-      <View style={styles.scrollView}>
-        <ScrollView
-          horizontal={true}
-          contentContainerStyle={styles.column}
-          showsHorizontalScrollIndicator={false}
-        >
-          <View style={[styles.box, { height: 120 }]}>
-            <Text style={styles.boxLabel}>Schedule</Text>
-            <Text style={styles.subLabel}>In Meeting</Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[styles.progress, { width: `${meetingPercentage}%` }]}
-              ></View>
-            </View>
+          <View style={styles.dateContainer}>
+            {getCurrentWeekDates().map((date, index) => (
+              <View key={index} style={styles.dateItem}>
+                <Text style={styles.dateLabel}>{moment(date).format('ddd')}</Text>
+                <Text>{moment(date).format('MMM DD')}</Text>
+              </View>
+            ))}
+
           </View>
-          <View style={[styles.box, { height: 120 }]}>
-            <Text style={styles.boxLabel}>Schedule</Text>
-            <Text style={styles.subLabel}>In Faculty</Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[styles.progress, { width: `${facultyPercentage}%` }]}
-              ></View>
-            </View>
+          <View style={styles.eventsContainer}>
+            {getCurrentWeekDates().map((date, index) => (
+              <CalendarEvent key={index} schedules={events.filter(event => event.day === moment(date).format('dddd'))} />
+            ))}
           </View>
-          <View style={[styles.box, { height: 120 }]}>
-            <Text style={styles.boxLabel}>Schedule</Text>
-            <Text style={styles.subLabel}>Outside School</Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[styles.progress, { width: `${OSPercentage}%` }]}
-              ></View>
-            </View>
-          </View>
-          <View style={[styles.box, { height: 120 }]}>
-            <Text style={styles.boxLabel}>Schedule</Text>
-            <Text style={styles.subLabel}>Work from home</Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[styles.progress, { width: `${WFHPercentage}%` }]}
-              ></View>
-            </View>
-          </View>
-          <View style={[styles.box, { height: 120 }]}>
-            <Text style={styles.boxLabel}>Schedule</Text>
-            <Text style={styles.subLabel}>Free Time</Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[styles.progress, { width: `${freeTimePercentage}%` }]}
-              ></View>
-            </View>
-          </View>
-        </ScrollView>
+        </View>
       </View>
-
-      <View style={{ maxHeight: 500 }}>
-        <Text style={styles.label}>Today's Schedule</Text>
-        <ScrollView>
-          {todayEvents.length > 0 ? (
-            // Render today's events
-            todayEvents.map((event) => (
-              <TouchableOpacity
-                key={event.id}
-                style={styles.eventContainer}
-                onPress={() => {
-                  if (event.status !== "WORK FROM HOME") {
-                    handleOpenQRCode(event.id);
-                  }
-                }}
-                disabled={event.status === "WORK FROM HOME"}
-              >
-                <Text style={styles.eventStatus}>{event.status}</Text>
-                <Text style={styles.eventDate}>
-                  {new Date(event.date).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </Text>
-                <Text>Start Time: {event.start_time}</Text>
-                <Text>End Time: {event.end_time}</Text>
-                <Text>Professor: {event.professor}</Text>
-              </TouchableOpacity>
-            ))
-          ) : (
-            // Render a message if there are no events for today
-            <Text>No events for today</Text>
-          )}
-        </ScrollView>
-      </View>
-
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => setModalVisible(true)}
@@ -261,15 +174,14 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* Modal */}
       <Modal
         animationType="slide"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+        <View style={styles.modalContainer2}>
+          <View style={styles.modalContent2}>
             {/* Header */}
             <TouchableOpacity
               style={styles.closeButton}
@@ -278,32 +190,13 @@ export default function HomeScreen() {
               <Ionicons name="close" size={24} color="black" />
             </TouchableOpacity>
             <Text style={styles.modalHeader}>Create a Schedule</Text>
-            {/* Status Input */}
             <TextInput
               style={styles.input}
-              placeholder="Choose between 4 categories"
-              value={status}
-              onChangeText={(text) => setStatus(text)}
+              placeholder="Input day of the scheule"
+              value={day}
+              onChangeText={(text) => setStartTime(text)}
             />
-            {/* Date Input */}
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => setShowDatePicker(true)} // Show date picker on press
-            >
-              <Text>{date.toDateString()}</Text>
-            </TouchableOpacity>
-            {/* Date Picker */}
-            {showDatePicker && (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  setDate(selectedDate);
-                }}
-              />
-            )}
+
             {/* Start Time Input */}
             <TextInput
               style={styles.input}
@@ -327,7 +220,7 @@ export default function HomeScreen() {
             {/* Submit Button */}
             <TouchableOpacity
               style={styles.submitButton}
-              onPress={handleSubmit}
+            // onPress={handleSubmit}
             >
               <Text style={styles.submitButtonText}>Submit</Text>
             </TouchableOpacity>
@@ -335,33 +228,75 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={showQRModal}
-        transparent={true}
-        onRequestClose={() => setShowQRModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalContainer}
-          activeOpacity={1} 
-          onPress={() => setShowQRModal(false)} 
-        >
-          <View style={styles.qrModalContent}>
-            <QRCode value={qrCodeData} size={200} />
-          </View>
-        </TouchableOpacity>
-      </Modal>
-      <Snackbar
-        visible={msgvisible}
-        onDismiss={() => setMsgVisible(false)}
-        duration={3000}
-      >
-        {message}
-      </Snackbar>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  maincont: {
+    flexDirection: 'row',
+    justifyContent: "center",
+    backgroundColor: '#f2f2f2',
+    alignItems: "center",
+    borderRadius: 10,
+    overflow: 'scroll',
+  },
+  dateContainer: {
+    flexDirection: 'column',
+    width: '20%',
+    height: "100%",
+    borderRightWidth: 1,
+    borderRightColor: '#ddd',
+    padding: 5,
+    backgroundColor: '#fff',
+  },
+  dateItem: {
+    height: "10%",
+    borderColor: 'black',
+    borderWidth: 1,
+    alignItems: 'center',
+    padding: 2,
+    marginBottom: 10,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  eventsContainer: {
+    flexDirection: 'column',
+    height: "100%",
+    flex: 1,
+    padding: 5,
+    backgroundColor: '#fff',
+  },
+  eventContainer: {
+    height: "10%",
+    marginBottom: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    backgroundColor: '#fafafa',
+  },
+  iconContainer: {
+    padding: 10,
+  },
+  calendarDropdown: {
+    padding: 10,
+  },
+  rightIcons: {
+    flexDirection: 'row',
+  },
+  calendarContainer: {
+    marginBottom: 20,
+  },
   container: {
     flex: 1,
     backgroundColor: "orange",
@@ -374,39 +309,33 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 20,
   },
-  headerText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
-  },
-  rightIcons: {
-    flexDirection: "row",
-  },
   iconContainer: {
     marginHorizontal: 5,
   },
-  label: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  closeButton: {
     marginTop: 20,
+    alignSelf: 'flex-end',
   },
-  column: {
-    marginTop: 5,
-    flexDirection: "row",
-    borderColor: "gray",
-    borderWidth: 1,
-    overflow: "scroll",
-    borderRadius: 10,
-  },
-  box: {
-    width: 200,
-    height: 120,
-    paddingHorizontal: 10,
-    paddingVertical: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-    borderRadius: 10,
-    margin: 10,
+  closeButtonText: {
+    color: 'blue',
   },
   addButton: {
     position: "absolute",
@@ -428,35 +357,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  boxLabel: {
-    fontSize: 18,
-    color: "#787878",
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  subLabel: {
-    fontSize: 18,
-    color: "#2b2b2b",
-  },
-  progressBar: {
-    width: "80%",
-    height: 10,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
-    marginTop: 5,
-  },
-  progress: {
-    height: "100%",
-    backgroundColor: "#696969",
-    borderRadius: 5,
-  },
-  modalContainer: {
+  modalContainer2: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  modalContent: {
+  modalContent2: {
     backgroundColor: "white",
     height: "75%",
     width: "80%",
@@ -496,20 +403,6 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
   },
-  eventContainer: {
-    maxHeight: "100%",
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "white",
-    borderRadius: 10,
-    elevation: 3,
-  },
-  eventStatus: {
-    fontWeight: "bold",
-    fontSize: 18,
-    marginBottom: 5,
-  },
-  eventDate: {
-    marginBottom: 5,
-  },
 });
+
+export default CalendarScreen;
