@@ -10,19 +10,18 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker"; // Import ImagePicker
 import StudentSidebar from "../component/studentSidebar";
-import { useNavigation } from "@react-navigation/native";
+// import { useNavigation } from "@react-navigation/native";
 import { Calendar } from "react-native-calendars";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import axios from "axios";
 
-const StudentHomeScreen = () => {
+export default function StudentHomeScreen({ navigation }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [codes, setCodes] = useState([]);
   const [qrData, setQrData] = useState(null);
-
-  const navigation = useNavigation();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -36,6 +35,10 @@ const StudentHomeScreen = () => {
     const result = await ImagePicker.launchImageLibraryAsync();
     console.log(result.assets[0].uri);
     setSelectedImage(result.assets[0].uri);
+  };
+
+  const navigateToViewSchedule = (scheduleCode) => {
+    navigation.navigate("StudentSchedule", { code: scheduleCode });
   };
 
   const decodeQRCode = async () => {
@@ -65,14 +68,27 @@ const StudentHomeScreen = () => {
     }
   };
 
-  const codes = [
-    {
-      code: "aoOtgO",
-    },
-    {
-      code: "KkSzX1",
-    },
-  ];
+  useEffect(() => {
+    fetchCodes();
+  }, []);
+
+  const fetchCodes = async () => {
+    try {
+      const response = await axios.get("http://3.26.19.203/get/enrolled");
+      setCodes(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // const codes = [
+  //   {
+  //     code: "aoOtgO",
+  //   },
+  //   {
+  //     code: "KkSzX1",
+  //   },
+  // ];
 
   return (
     <View style={styles.container}>
@@ -109,9 +125,13 @@ const StudentHomeScreen = () => {
       <View style={styles.codeContainer}>
         <Text style={styles.codeTitle}>Current Schedules Enrolled</Text>
         {codes.map((item, index) => (
-          <View style={styles.codeItem} key={index}>
+          <TouchableOpacity
+            style={styles.codeItem}
+            key={index}
+            onPress={() => navigateToViewSchedule(item.code)}
+          >
             <Text style={styles.codeText}>Schedule code - {item.code}</Text>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
       <TouchableOpacity
@@ -156,7 +176,7 @@ const StudentHomeScreen = () => {
       </Modal>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -236,5 +256,3 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
-
-export default StudentHomeScreen;
