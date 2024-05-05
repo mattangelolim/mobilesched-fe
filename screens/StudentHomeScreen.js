@@ -14,6 +14,7 @@ import StudentSidebar from "../component/studentSidebar";
 import { Calendar } from "react-native-calendars";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import axios from "axios";
+import { Snackbar } from "react-native-paper";
 
 export default function StudentHomeScreen({ navigation }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -21,7 +22,8 @@ export default function StudentHomeScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [codes, setCodes] = useState([]);
-  const [qrData, setQrData] = useState(null);
+  const [visible, setVisible] = useState(false);
+  const [message, setMessage] = useState("");
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -33,38 +35,54 @@ export default function StudentHomeScreen({ navigation }) {
 
   const handleChoosePhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync();
-    console.log(result.assets[0].uri);
+    // console.log(result.assets[0].uri);
     setSelectedImage(result.assets[0].uri);
+
+    decodeQRCode(result.assets[0].uri);
   };
 
   const navigateToViewSchedule = (scheduleCode) => {
     navigation.navigate("StudentSchedule", { code: scheduleCode });
   };
 
-  const decodeQRCode = async () => {
-    try {
-      const formData = new FormData();
-      formData.append("image", {
-        uri: selectedImage,
-        name: "image.jpg",
-        type: "image/jpeg",
-      });
+  const decodeQRCode = async (selectedImageUri) => {
+    if (!selectedImageUri) {
+      console.log("No image selected");
+      return;
+    }
 
-      const response = await axios.post("http://3.26.19.203/decode", formData, {
+    const formData = new FormData();
+    const localUri = selectedImageUri;
+    const filename = localUri.split("/").pop();
+
+    // Infer the type of the image
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : `image`;
+
+    // Append the file to FormData
+    formData.append("qrImage", {
+      uri: localUri,
+      name: filename,
+      type,
+    });
+
+    try {
+      const response = await axios.post("http://3.26.19.203/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 10000,
       });
-      console.log(response);
-
-      if (response.data && response.data.qrData) {
-        console.log("QR Code Data:", response.data.qrData);
-      } else {
-        console.log("QR code not found in the image.");
+      const data = response.data;
+      if (response.status === 200) {
+        setSelectedImage(null);
+        setModalVisible(false);
+        fetchCodes();
+        setMessage("Schedule Saved Success");
+        setVisible(true);
       }
     } catch (error) {
       console.error("Error decoding QR code:", error);
-      throw error;
     }
   };
 
@@ -80,15 +98,6 @@ export default function StudentHomeScreen({ navigation }) {
       console.error(error);
     }
   };
-
-  // const codes = [
-  //   {
-  //     code: "aoOtgO",
-  //   },
-  //   {
-  //     code: "KkSzX1",
-  //   },
-  // ];
 
   return (
     <View style={styles.container}>
@@ -166,14 +175,19 @@ export default function StudentHomeScreen({ navigation }) {
                   style={{ width: 200, height: 200 }}
                 />
               )}
-              {qrData && <Text>QR Code Data: {qrData}</Text>}
-              <TouchableOpacity onPress={decodeQRCode}>
-                <Text>Decode QR Code</Text>
-              </TouchableOpacity>
+    
             </View>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+      {/* SNACK BAR FOR MESSAGE POP UP */}
+      <Snackbar
+        visible={visible}
+        onDismiss={() => setVisible(false)}
+        duration={3000}
+      >
+        {message}
+      </Snackbar>
     </View>
   );
 }

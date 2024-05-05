@@ -49,12 +49,17 @@ const CalendarEvent = ({ day, schedules }) => {
             <FlatList
               data={schedules}
               renderItem={({ item }) => (
-                <Text>
-                  <Text style={styles.descriptionText}>
-                    {item.description} |
-                  </Text>
-                  {` ${item.start_time} - ${item.end_time}`}
-                </Text>
+                <View style={styles.scheduleItem}>
+                  <View style={styles.additional}>
+                    <Text style={styles.descriptionText}>
+                      {item.description} |
+                    </Text>
+                    <Text>{` ${item.start_time} - ${item.end_time}`}</Text>
+                  </View>
+                  {item.status !== null && (
+                    <Text style={styles.statuslabel}>{item.status}</Text>
+                  )}
+                </View>
               )}
               keyExtractor={(item, index) => index.toString()}
             />
@@ -567,6 +572,20 @@ const styles = StyleSheet.create({
   modalText: {
     marginBottom: 15,
     textAlign: "center",
+  },
+  statuslabel: {
+    color: "gray",
+    marginLeft: 5,
+    fontSize: 12,
+  },
+  additional: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  scheduleItem: {
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "flex-start",
   },
 });
 

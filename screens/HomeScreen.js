@@ -18,10 +18,45 @@ import QRCode from "react-native-qrcode-svg";
 import Sidebar from "../component/sidebar";
 import { useNavigation } from "@react-navigation/native";
 
-const CalendarEvent = ({ day, schedules }) => {
+const CalendarEvent = ({ day, schedules, fetchData }) => {
   const [modalVisible, setModalVisible] = useState(false);
+  // const [selectedSchedule, setSelectedSchedule] = useState(null); // State to manage selected schedule
+  // const [selectedOption, setSelectedOption] = useState(null); // State to manage selected option
+  const [selectedOpen, setSelectedOpen] = useState(null);
   const displaySchedules = schedules.slice(0, 2);
   const moreSchedules = schedules.length > 2;
+
+  const options = [
+    { id: 1, label: "Online Learning" },
+    { id: 2, label: "Asynchronous Class" },
+    { id: 3, label: "No Classes" },
+    { id: 4, label: "Face to Face Meeting" },
+  ];
+
+  const handleOptionSelect = async (option) => {
+    const data = {
+      id: selectedOpen,
+      status: option,
+    };
+
+    try {
+      const response = await axios.post(
+        "http://3.26.19.203/create/status",
+        data
+      );
+
+      if (response.status === 201) {
+        setSelectedOpen(null);
+        fetchData();
+
+        console.log("Response:", response.data);
+        console.log("Status updated successfully");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      console.error("Failed to update status");
+    }
+  };
 
   return (
     <View style={styles.eventContainer}>
@@ -52,15 +87,30 @@ const CalendarEvent = ({ day, schedules }) => {
             <FlatList
               data={schedules}
               renderItem={({ item }) => (
-                <Text>
-                  <Text style={styles.descriptionText}>
-                    {item.description} |
-                  </Text>
-                  {` ${item.start_time} - ${item.end_time}`}
-                </Text>
+                <TouchableOpacity
+                  style={styles.scheduleItem}
+                  // onPress={() => setSelectedSchedule(item)}
+                >
+                  <View style={styles.additional}>
+                    {item.status === null ? (
+                      <Ionicons
+                        name="add-circle"
+                        size={14}
+                        color="blue"
+                        onPress={() => setSelectedOpen(item.id)}
+                      />
+                    ) : null}
+                    <Text style={styles.descriptionText}>
+                      {item.description} |{" "}
+                    </Text>
+                    <Text>{`${item.start_time} - ${item.end_time}`}</Text>
+                  </View>
+                  <Text style={styles.statuslabel}>{item.status}</Text>
+                </TouchableOpacity>
               )}
-              keyExtractor={(item, index) => index.toString()}
+              keyExtractor={(item) => item.id.toString()}
             />
+
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setModalVisible(false)}
@@ -69,6 +119,38 @@ const CalendarEvent = ({ day, schedules }) => {
             </TouchableOpacity>
           </View>
         </View>
+        {selectedOpen !== null && (
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={selectedOpen !== null}
+            onRequestClose={() => setSelectedOpen(null)}
+          >
+            <View style={styles.popup}>
+              <View style={styles.optionModalContent}>
+                <Text style={styles.modalTitle}>Select Option</Text>
+                <FlatList
+                  data={options}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.optionItem}
+                      onPress={() => handleOptionSelect(item.label)}
+                    >
+                      <Text>{item.label}</Text>
+                    </TouchableOpacity>
+                  )}
+                  keyExtractor={(item) => item.id.toString()}
+                />
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setSelectedOpen(null)}
+                >
+                  <Text style={styles.closeButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
       </Modal>
     </View>
   );
@@ -79,7 +161,7 @@ const HomeScreen = () => {
   const [message, setMessage] = useState("");
 
   const [showCalendar, setShowCalendar] = useState(false);
-  const [markedDates, setMarkedDates] = useState({});
+  const [markedDate, setMarkedDates] = useState({});
   const [modalVisible, setModalVisible] = useState(false);
   // const [status, setStatus] = useState("");
   const [number, setNumber] = useState("");
@@ -147,6 +229,14 @@ const HomeScreen = () => {
     }
   };
 
+  const toggleCalendar = () => {
+    setShowCalendar(!showCalendar);
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   const handleInputChange = (text) => {
     if (/^\d+$/.test(text) || text === "") {
       setNumber(text);
@@ -168,32 +258,25 @@ const HomeScreen = () => {
     }
   };
 
-  useEffect(() => {
-    const markDates = () => {
-      const newMarkedDates = {};
-      events.forEach((event) => {
-        const currentDate = moment().startOf("month");
+  const markDates = () => {
+    const newMarkedDates = {};
+    events.forEach((event) => {
+      const currentDate = moment().startOf("month");
 
-        while (currentDate.month() === moment().month()) {
-          if (currentDate.format("dddd") === event.day) {
-            newMarkedDates[currentDate.format("YYYY-MM-DD")] = { marked: true };
-          }
-          currentDate.add(1, "day");
+      while (currentDate.month() === moment().month()) {
+        if (currentDate.format("dddd") === event.day) {
+          newMarkedDates[currentDate.format("YYYY-MM-DD")] = { marked: true };
         }
-      });
-      setMarkedDates(newMarkedDates);
-    };
+        currentDate.add(1, "day");
+      }
+    });
+    setMarkedDates(newMarkedDates);
+  };
 
+  useEffect(() => {
     markDates();
   }, []);
 
-  const toggleCalendar = () => {
-    setShowCalendar(!showCalendar);
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
   const groupedEvents = {};
 
   // Group events by day
@@ -217,7 +300,6 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-    
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconContainer} onPress={toggleSidebar}>
           <Ionicons name="menu" size={24} color="white" />
@@ -239,10 +321,14 @@ const HomeScreen = () => {
       </View>
       {showCalendar && (
         <View style={styles.calendarContainer}>
-          <Calendar markedDates={markedDates} />
+          <Calendar markedDates={markedDate} />
         </View>
       )}
-      <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} navigation={navigation} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={toggleSidebar}
+        navigation={navigation}
+      />
       <View style={styles.maincont2}>
         {!availableSem ? (
           <View style={styles.inputContainer}>
@@ -303,6 +389,7 @@ const HomeScreen = () => {
                 schedules={events.filter(
                   (event) => event.day === moment(date).format("dddd")
                 )}
+                fetchData={fetchData}
               />
             ))}
           </View>
@@ -491,6 +578,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontWeight: "bold",
+    marginLeft: 5,
   },
   iconContainer: {
     padding: 10,
@@ -509,12 +597,6 @@ const styles = StyleSheet.create({
     backgroundColor: "orange",
     paddingVertical: 50,
     paddingHorizontal: 10,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
   },
   iconContainer: {
     marginHorizontal: 5,
@@ -713,6 +795,57 @@ const styles = StyleSheet.create({
   modalText: {
     marginBottom: 15,
     textAlign: "center",
+  },
+  scheduleItem: {
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "flex-start",
+  },
+  popup: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  optionModalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  optionItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+  },
+  optionText: {
+    fontSize: 16,
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: "blue",
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  additional: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  statuslabel: {
+    color: "gray",
+    marginLeft: 5,
+    fontSize: 12,
   },
 });
 
