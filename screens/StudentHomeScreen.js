@@ -7,6 +7,7 @@ import {
   Modal,
   Image,
   TouchableWithoutFeedback,
+  FlatList
 } from "react-native";
 import * as ImagePicker from "expo-image-picker"; // Import ImagePicker
 import StudentSidebar from "../component/studentSidebar";
@@ -24,6 +25,35 @@ export default function StudentHomeScreen({ navigation }) {
   const [codes, setCodes] = useState([]);
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");
+
+  const [announcements, setAnnouncements] = useState([]);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+  const [modalVisible5, setModalVisible5] = useState(false);
+
+  const openModal5 = () => {
+    setModalVisible5(true);
+};
+
+const closeModal5 = () => {
+    setModalVisible5(false);
+};
+
+useEffect(() => {
+    fetchAnnouncements();
+}, []);
+
+
+const fetchAnnouncements = async () => {
+    try {
+        const response = await axios.get("http://3.26.19.203/get/announcements");
+        setAnnouncements(response.data.announcements);
+        // Calculate unread announcements count
+        const unreadCount = response.data.announcements.filter(announcement => !announcement.read).length;
+        setUnreadAnnouncements(unreadCount);
+    } catch (error) {
+        console.error("Error fetching announcements:", error);
+    }
+};
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -73,16 +103,19 @@ export default function StudentHomeScreen({ navigation }) {
         },
         timeout: 10000,
       });
-      const data = response.data;
-      if (response.status === 200) {
+      if (response.status === 202) {
         setSelectedImage(null);
         setModalVisible(false);
         fetchCodes();
         setMessage("Schedule Saved Success");
         setVisible(true);
+      } else {
+        setVisible(true);
+        setMessage("Already enroll in the schedule.");
       }
     } catch (error) {
-      console.error("Error decoding QR code:", error);
+      setVisible(true);
+      setMessage("Error Occured in reading qr, please check your connection");
     }
   };
 
@@ -103,21 +136,28 @@ export default function StudentHomeScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconContainer} onPress={toggleSidebar}>
-          <Ionicons name="menu" size={24} color="white" />
+          <Ionicons name="menu" size={24} color="orange" />
         </TouchableOpacity>
         <View style={styles.rightIcons}>
           <TouchableOpacity
             style={styles.iconContainer}
             onPress={toggleCalendar}
           >
-            <Ionicons name="calendar" size={24} color="white" />
+            <Ionicons name="calendar" size={24} color="orange" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconContainer}>
-            <Ionicons name="search" size={24} color="white" />
+            <Ionicons name="search" size={24} color="orange" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconContainer}>
-            <Ionicons name="notifications" size={24} color="white" />
-          </TouchableOpacity>
+       
+  <TouchableOpacity style={styles.iconContainer} onPress={openModal5}>
+                        <Ionicons name="notifications" size={24} color="orange" />
+                        {unreadAnnouncements > 0 && (
+                            <View style={styles.notificationBadge}>
+                                <Text style={styles.notificationText}>{unreadAnnouncements}</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+
         </View>
       </View>
       {showCalendar && (
@@ -139,7 +179,8 @@ export default function StudentHomeScreen({ navigation }) {
             key={index}
             onPress={() => navigateToViewSchedule(item.code)}
           >
-            <Text style={styles.codeText}>Schedule code - {item.code}</Text>
+            <Text style={styles.codeLabel}>Schedule code: {item.code}</Text>
+            <Text style={styles.codeText}>Professor: {item.name}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -151,6 +192,31 @@ export default function StudentHomeScreen({ navigation }) {
           <Ionicons name="add" size={50} color="white" />
         </View>
       </TouchableOpacity>
+
+      <Modal
+                visible={modalVisible5}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={closeModal5}
+            >
+                <View style={styles.modalContainer5}>
+                    <TouchableOpacity style={styles.closeButton5} onPress={closeModal5}>
+                        <Ionicons name="close" size={24} color="#333" />
+                    </TouchableOpacity>
+                    <View style={styles.announcementShow}>
+                    <FlatList
+                        data={announcements}
+                        renderItem={({ item }) => (
+                            <View style={styles.announcementItem}>
+                                <Text>{item.announcement}</Text>
+                            </View>
+                        )}
+                        keyExtractor={(item) => item.id.toString()}
+                    />
+                    </View>
+                </View>
+            </Modal>
+
 
       {/* Modal for Image Selection */}
       <Modal
@@ -175,7 +241,7 @@ export default function StudentHomeScreen({ navigation }) {
                   style={{ width: 200, height: 200 }}
                 />
               )}
-    
+
             </View>
           </View>
         </TouchableWithoutFeedback>
@@ -195,7 +261,7 @@ export default function StudentHomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "orange",
+    backgroundColor: "whitesmoke",
     paddingVertical: 50,
     paddingHorizontal: 10,
   },
@@ -234,8 +300,15 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 5,
   },
+  codeLabel: {
+    fontWeight: "bold",
+    marginRight: 5,
+    fontSize: 16,
+    color: "#333", // You can adjust the color as needed
+  },
   codeText: {
     fontSize: 16,
+    color: "#666", // You can adjust the color as needed
   },
   addButton: {
     position: "absolute",
@@ -244,7 +317,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "gray",
+    backgroundColor: "orange",
     alignItems: "center",
     justifyContent: "center",
     elevation: 3,
@@ -253,7 +326,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "gray",
+    backgroundColor: "orange",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -269,4 +342,40 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
+  notificationBadge: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "red",
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+},
+notificationText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+},
+modalContainer5: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+},
+announcementItem: {
+    padding: 20,
+    marginVertical: 5,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    elevation: 3,
+},
+closeButton5: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 1,
+},
+announcementShow:{
+    marginTop:"10%"
+}
 });

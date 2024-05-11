@@ -3,11 +3,9 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Button,
   StyleSheet,
   Modal,
   FlatList,
-  TextInput,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Calendar } from "react-native-calendars";
@@ -49,8 +47,8 @@ const CalendarEvent = ({ day, schedules, fetchData }) => {
         setSelectedOpen(null);
         fetchData();
 
-        console.log("Response:", response.data);
-        console.log("Status updated successfully");
+        // console.log("Response:", response.data);
+        // console.log("Status updated successfully");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -89,7 +87,7 @@ const CalendarEvent = ({ day, schedules, fetchData }) => {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.scheduleItem}
-                  // onPress={() => setSelectedSchedule(item)}
+                // onPress={() => setSelectedSchedule(item)}
                 >
                   <View style={styles.additional}>
                     {item.status === null ? (
@@ -161,8 +159,12 @@ const HomeScreen = () => {
   const [message, setMessage] = useState("");
 
   const [showCalendar, setShowCalendar] = useState(false);
-  const [markedDate, setMarkedDates] = useState({});
-  const [modalVisible, setModalVisible] = useState(false);
+  const [markedDate2, setMarkedDates2] = useState({});
+
+  const [announcements, setAnnouncements] = useState([]);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+  const [modalVisible5, setModalVisible5] = useState(false);
+
   // const [status, setStatus] = useState("");
   const [number, setNumber] = useState("");
   const [availableSem, setAvailableSem] = useState(null);
@@ -170,17 +172,37 @@ const HomeScreen = () => {
 
   const [events, setEvents] = useState([]);
 
-  const [day, setDay] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [professor, setProfessor] = useState("");
-  const [description, setDescription] = useState("");
-
   const [QRValue, setQrValue] = useState("");
   const [modalQRVisible, setModalQRVisible] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const navigation = useNavigation();
+
+  const openModal5 = () => {
+    setModalVisible5(true);
+  };
+
+  const closeModal5 = () => {
+    setModalVisible5(false);
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await axios.get("http://3.26.19.203/get/announcements");
+      setAnnouncements(response.data.announcements);
+      // Calculate unread announcements count
+      const unreadCount = response.data.announcements.filter(announcement => !announcement.read).length;
+      setUnreadAnnouncements(unreadCount);
+    } catch (error) {
+      console.error("Error fetching announcements:", error);
+    }
+  };
+
 
   const handleQRCodePress = (code) => {
     setQrValue(code);
@@ -209,25 +231,6 @@ const HomeScreen = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      const response = await axios.post("http://3.26.19.203/create/schedule", {
-        day,
-        start_time: startTime,
-        end_time: endTime,
-        professor,
-        description,
-      });
-      if (response.status === 200) {
-        setModalVisible(false);
-        setMessage("Schedule Created Successful");
-        setVisible(true);
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error submitting:", error);
-    }
-  };
 
   const toggleCalendar = () => {
     setShowCalendar(!showCalendar);
@@ -237,45 +240,25 @@ const HomeScreen = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const handleInputChange = (text) => {
-    if (/^\d+$/.test(text) || text === "") {
-      setNumber(text);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const response = await axios.post("http://3.26.19.203/set/sem/range", {
-        number,
-      });
-      if (response.status === 200) {
-        setMessage("Semester Range Set Successful");
-        setVisible(true);
-        checkAvailableSem();
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    }
-  };
-
-  const markDates = () => {
-    const newMarkedDates = {};
+  const markDates2 = () => {
+    const newMarkedDates2 = {};
     events.forEach((event) => {
       const currentDate = moment().startOf("month");
 
       while (currentDate.month() === moment().month()) {
         if (currentDate.format("dddd") === event.day) {
-          newMarkedDates[currentDate.format("YYYY-MM-DD")] = { marked: true };
+          newMarkedDates2[currentDate.format("YYYY-MM-DD")] = { marked: true };
         }
         currentDate.add(1, "day");
       }
     });
-    setMarkedDates(newMarkedDates);
+    setMarkedDates2(newMarkedDates2);
+
   };
 
   useEffect(() => {
-    markDates();
-  }, []);
+    markDates2();
+  }, [events]);
 
   const groupedEvents = {};
 
@@ -302,26 +285,31 @@ const HomeScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconContainer} onPress={toggleSidebar}>
-          <Ionicons name="menu" size={24} color="white" />
+          <Ionicons name="menu" size={24} color="orange" />
         </TouchableOpacity>
         <View style={styles.rightIcons}>
           <TouchableOpacity
             style={styles.iconContainer}
             onPress={toggleCalendar}
           >
-            <Ionicons name="calendar" size={24} color="white" />
+            <Ionicons name="calendar" size={24} color="orange" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconContainer}>
-            <Ionicons name="search" size={24} color="white" />
+            <Ionicons name="search" size={24} color="orange" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconContainer}>
-            <Ionicons name="notifications" size={24} color="white" />
+          <TouchableOpacity style={styles.iconContainer} onPress={openModal5}>
+            <Ionicons name="notifications" size={24} color="orange" />
+            {unreadAnnouncements > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationText}>{unreadAnnouncements}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
       {showCalendar && (
         <View style={styles.calendarContainer}>
-          <Calendar markedDates={markedDate} />
+          <Calendar markedDates={markedDate2} />
         </View>
       )}
       <Sidebar
@@ -332,16 +320,7 @@ const HomeScreen = () => {
       <View style={styles.maincont2}>
         {!availableSem ? (
           <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.inputDays}
-              placeholder="no of days this sem?"
-              value={number}
-              onChangeText={handleInputChange}
-              keyboardType="numeric"
-            />
-            <TouchableOpacity onPress={handleSave}>
-              <Text style={styles.saveButton}>Save</Text>
-            </TouchableOpacity>
+            <Text>No Current Semester</Text>
           </View>
         ) : (
           <View style={styles.dateRanges}>
@@ -396,75 +375,6 @@ const HomeScreen = () => {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setModalVisible(true)}
-      >
-        <View style={styles.addButtonIcon}>
-          <Ionicons name="add" size={50} color="white" />
-        </View>
-      </TouchableOpacity>
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer2}>
-          <View style={styles.modalContent2}>
-            {/* Header */}
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Ionicons name="close" size={24} color="black" />
-            </TouchableOpacity>
-            <Text style={styles.modalHeader}>Create a Schedule</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Input day of the scheule"
-              value={day}
-              onChangeText={(text) => setDay(text)}
-            />
-
-            {/* Start Time Input */}
-            <TextInput
-              style={styles.input}
-              placeholder="Start Time (use military time format)"
-              value={startTime}
-              onChangeText={(text) => setStartTime(text)}
-            />
-            {/* End Time Input */}
-            <TextInput
-              style={styles.input}
-              placeholder="End Time (use military time format)"
-              value={endTime}
-              onChangeText={(text) => setEndTime(text)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Professor's name"
-              value={professor}
-              onChangeText={(text) => setProfessor(text)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Subject Description"
-              value={description}
-              onChangeText={(text) => setDescription(text)}
-            />
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleSubmit}
-            >
-              <Text style={styles.submitButtonText}>Submit</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       {/* QR CODE MODAL */}
       <Modal
         animationType="slide"
@@ -493,6 +403,30 @@ const HomeScreen = () => {
       >
         {message}
       </Snackbar>
+      <Modal
+        visible={modalVisible5}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeModal5}
+      >
+        <View style={styles.modalContainer5}>
+          <TouchableOpacity style={styles.closeButton5} onPress={closeModal5}>
+            <Ionicons name="close" size={24} color="#333" />
+          </TouchableOpacity>
+          <View style={styles.announcementShow}>
+            <FlatList
+              data={announcements}
+              renderItem={({ item }) => (
+                <View style={styles.announcementItem}>
+                  <Text>{item.announcement}</Text>
+                </View>
+              )}
+              keyExtractor={(item) => item.id.toString()}
+            />
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 };
@@ -505,6 +439,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   maincont2: {
+    flex: 1,
     flexDirection: "column",
     justifyContent: "center",
     backgroundColor: "#f2f2f2",
@@ -514,6 +449,7 @@ const styles = StyleSheet.create({
   },
   maincont: {
     height: "90%",
+    overflow: "auto",
     flexDirection: "row",
     justifyContent: "center",
     backgroundColor: "#f2f2f2",
@@ -523,7 +459,6 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: "column",
     width: "20%",
-    height: "100%",
     borderRightWidth: 1,
     borderRightColor: "#ddd",
     padding: 5,
@@ -553,7 +488,6 @@ const styles = StyleSheet.create({
   },
   eventsContainer: {
     flexDirection: "column",
-    height: "100%",
     flex: 1,
     padding: 5,
     backgroundColor: "#fff",
@@ -594,8 +528,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "orange",
-    paddingVertical: 50,
+    backgroundColor: "whitesmoke",
+    paddingTop: 40,
     paddingHorizontal: 10,
   },
   iconContainer: {
@@ -687,7 +621,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
-  closeButton: {
+  closeButton2: {
     position: "absolute",
     top: 10,
     right: 10,
@@ -752,6 +686,7 @@ const styles = StyleSheet.create({
   },
   dateRanges: {
     flexDirection: "column",
+    marginVertical: 1
   },
   QrContainer: {
     flexDirection: "row",
@@ -847,6 +782,42 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 12,
   },
+  notificationBadge: {
+    position: "absolute",
+    bottom: 8,
+    left: 10,
+    backgroundColor: "red",
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  notificationText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  modalContainer5: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  announcementItem: {
+    padding: 20,
+    marginVertical: 5,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    elevation: 3,
+  },
+  closeButton5: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 1,
+  },
+  announcementShow: {
+    marginTop: "10%"
+  }
 });
 
 export default HomeScreen;

@@ -55,7 +55,7 @@ const Sidebar = ({ isOpen, onClose, navigation }) => {
         <View style={styles.separator} />
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out" size={36} color="black" />
+          <Ionicons name="log-out" size={36} color="orange" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
-    color: "#333", // Change text color to black
+    color: "orange", // Change text color to black
   },
   userContainer: {
     flexDirection: "row",
@@ -138,6 +138,7 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 16,
     fontWeight: "bold",
+    color:"orange"
   },
 });
 

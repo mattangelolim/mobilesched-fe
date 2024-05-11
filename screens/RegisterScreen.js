@@ -15,27 +15,19 @@ export default function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [userType, setUserType] = useState("");
+  // const [userType, setUserType] = useState("Student");
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");
 
   const handleRegister = async () => {
     try {
-      const userTypeUpperCase = userType.toUpperCase();
-      let user_type;
-  
-      if (userTypeUpperCase === "NO") {
-        user_type = "Professor";
-      } else {
-        user_type = "Student";
-      }
   
       const response = await axios.post("http://3.26.19.203/register/user", {
         name,
         email,
         username,
         password,
-        user_type,
+        user_type:"Student"
       });
   
       if (response.status === 200) {
@@ -71,15 +63,6 @@ export default function RegisterScreen({ navigation }) {
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
-        />
-      </View>
-      <View style={styles.inputView}>
-        <TextInput
-          style={styles.inputText}
-          placeholder="Are You a Student? (YES or NO)"
-          placeholderTextColor="#003f5c"
-          value={userType}
-          onChangeText={setUserType}
         />
       </View>
       <View style={styles.inputView}>

@@ -3,22 +3,61 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Button,
   StyleSheet,
   Modal,
   FlatList,
+  TextInput,
 } from "react-native";
-import StudentSidebar from "../component/studentSidebar";
-import { useNavigation } from "@react-navigation/native";
-import { Calendar } from "react-native-calendars";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { useRoute } from "@react-navigation/native";
+import { Calendar } from "react-native-calendars";
 import moment from "moment";
 import axios from "axios";
+import { Snackbar } from "react-native-paper";
+import QRCode from "react-native-qrcode-svg";
+import Sidebar from "../component/sidebar";
+import { useNavigation } from "@react-navigation/native";
+import { useRoute } from "@react-navigation/native";
 
-const CalendarEvent = ({ day, schedules }) => {
+const CalendarEvent = ({ codes, schedules, fetchData }) => {
   const [modalVisible, setModalVisible] = useState(false);
+  // const [selectedSchedule, setSelectedSchedule] = useState(null); // State to manage selected schedule
+  // const [selectedOption, setSelectedOption] = useState(null); // State to manage selected option
+  const [selectedOpen, setSelectedOpen] = useState(null);
   const displaySchedules = schedules.slice(0, 2);
   const moreSchedules = schedules.length > 2;
+
+  const options = [
+    { id: 1, label: "Online Learning" },
+    { id: 2, label: "Asynchronous Class" },
+    { id: 3, label: "No Classes" },
+    { id: 4, label: "Face to Face Meeting" },
+  ];
+
+  const handleOptionSelect = async (option) => {
+    const data = {
+      id: selectedOpen,
+      status: option,
+    };
+
+    try {
+      const response = await axios.post(
+        "http://3.26.19.203/create/status",
+        data
+      );
+
+      if (response.status === 201) {
+        setSelectedOpen(null);
+        fetchData(codes);
+
+        console.log("Response:", response.data);
+        console.log("Status updated successfully");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      console.error("Failed to update status");
+    }
+  };
 
   return (
     <View style={styles.eventContainer}>
@@ -49,20 +88,30 @@ const CalendarEvent = ({ day, schedules }) => {
             <FlatList
               data={schedules}
               renderItem={({ item }) => (
-                <View style={styles.scheduleItem}>
+                <TouchableOpacity
+                  style={styles.scheduleItem}
+                // onPress={() => setSelectedSchedule(item)}
+                >
                   <View style={styles.additional}>
+                    {item.status === null ? (
+                      <Ionicons
+                        name="add-circle"
+                        size={14}
+                        color="blue"
+                        onPress={() => setSelectedOpen(item.id)}
+                      />
+                    ) : null}
                     <Text style={styles.descriptionText}>
-                      {item.description} |
+                      {item.description} |{" "}
                     </Text>
-                    <Text>{` ${item.start_time} - ${item.end_time}`}</Text>
+                    <Text>{`${item.start_time} - ${item.end_time}`}</Text>
                   </View>
-                  {item.status !== null && (
-                    <Text style={styles.statuslabel}>{item.status}</Text>
-                  )}
-                </View>
+                  <Text style={styles.statuslabel}>{item.status}</Text>
+                </TouchableOpacity>
               )}
-              keyExtractor={(item, index) => index.toString()}
+              keyExtractor={(item) => item.id.toString()}
             />
+
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setModalVisible(false)}
@@ -71,26 +120,73 @@ const CalendarEvent = ({ day, schedules }) => {
             </TouchableOpacity>
           </View>
         </View>
+        {selectedOpen !== null && (
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={selectedOpen !== null}
+            onRequestClose={() => setSelectedOpen(null)}
+          >
+            <View style={styles.popup}>
+              <View style={styles.optionModalContent}>
+                <Text style={styles.modalTitle}>Select Option</Text>
+                <FlatList
+                  data={options}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.optionItem}
+                      onPress={() => handleOptionSelect(item.label)}
+                    >
+                      <Text>{item.label}</Text>
+                    </TouchableOpacity>
+                  )}
+                  keyExtractor={(item) => item.id.toString()}
+                />
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setSelectedOpen(null)}
+                >
+                  <Text style={styles.closeButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
       </Modal>
     </View>
   );
 };
 
-const StudentScheduleScreen = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [markedDates, setMarkedDates] = useState({});
-  const [events, setEvents] = useState([]);
+const AdminViewProfSchedScreen = () => {
+  const [visible, setVisible] = useState(false);
+  const [message, setMessage] = useState("");
+  const route = useRoute();
 
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [markedDate3, setMarkedDates] = useState({});
+  const [modalVisible, setModalVisible] = useState(false);
+  // const [status, setStatus] = useState("");
+  const [number, setNumber] = useState("");
   const [availableSem, setAvailableSem] = useState(null);
   const options = { month: "long", day: "2-digit", year: "numeric" };
-  // const [code, setCode] = useState(null);
-  const navigation = useNavigation();
-  const route = useRoute();
+
   const [announcements, setAnnouncements] = useState([]);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [modalVisible5, setModalVisible5] = useState(false);
 
+
+  const [events, setEvents] = useState([]);
+
+  const [day, setDay] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [professor, setProfessor] = useState("");
+  const [codes, setCodes] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [QRValue, setQrValue] = useState("");
+  const [modalQRVisible, setModalQRVisible] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const openModal5 = () => {
     setModalVisible5(true);
@@ -117,12 +213,24 @@ const StudentScheduleScreen = () => {
     }
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+
+  useEffect(() => {
+    const { code, name } = route.params;
+    if (code) {
+      setProfessor(name)
+      setCodes(code)
+      checkAvailableSem(code)
+      fetchData(code);
+    }
+  }, [route.params]);
+
+  const navigation = useNavigation();
+
+  const handleQRCodePress = (code) => {
+    setQrValue(code);
+    setModalQRVisible(true);
   };
-  const toggleCalendar = () => {
-    setShowCalendar(!showCalendar);
-  };
+
 
   const fetchData = async (code) => {
     try {
@@ -133,45 +241,86 @@ const StudentScheduleScreen = () => {
       });
       setEvents(response.data);
     } catch (error) {
-      // console.log(code)
-      console.error("Error fetching data:", error);
+      console.error("Error fetching data3:", error);
     }
   };
-
   const checkAvailableSem = async (code) => {
     try {
-      const response = await axios.get("http://3.26.19.203/range/sched", {
+      const response = await axios.get("http://3.26.19.203/check/sem/ranges", {
         params: {
           code: code,
         },
       });
       setAvailableSem(response.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching data2:", error);
     }
   };
+
+  const handleSubmit = async () => {
+    try {
+      const response = await axios.post(`http://3.26.19.203/create/schedule?code=${codes}`, {
+        day,
+        start_time: startTime,
+        end_time: endTime,
+        professor,
+        description
+      });
+      if (response.status === 200) {
+        setModalVisible(false);
+        setMessage("Schedule Created Successful");
+        setVisible(true);
+        fetchData(codes);
+      }
+    } catch (error) {
+      console.error("Error submitting:", error);
+    }
+  };
+
+  const toggleCalendar = () => {
+    setShowCalendar(!showCalendar);
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleInputChange = (text) => {
+    if (/^\d+$/.test(text) || text === "") {
+      setNumber(text);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await axios.post("http://3.26.19.203/set/sem/range?code=${codes}", {
+        number,
+        code: codes
+      });
+      if (response.status === 200) {
+        setMessage("Semester Range Set Successful");
+        setVisible(true);
+        checkAvailableSem(codes);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
   const markDates = () => {
     const newMarkedDates = {};
     events.forEach((event) => {
-      const currentDate2 = moment().startOf("month");
+      const currentDate = moment().startOf("month");
 
-      while (currentDate2.month() === moment().month()) {
-        if (currentDate2.format("dddd") === event.day) {
-          newMarkedDates[currentDate2.format("YYYY-MM-DD")] = { marked: true };
+      while (currentDate.month() === moment().month()) {
+        if (currentDate.format("dddd") === event.day) {
+          newMarkedDates[currentDate.format("YYYY-MM-DD")] = { marked: true };
         }
-        currentDate2.add(1, "day");
+        currentDate.add(1, "day");
       }
     });
     setMarkedDates(newMarkedDates);
   };
-
-  useEffect(() => {
-    const { code } = route.params;
-    if (code) {
-      fetchData(code);
-      checkAvailableSem(code);
-    }
-  }, [route.params]);
 
   useEffect(() => {
     markDates();
@@ -227,10 +376,10 @@ const StudentScheduleScreen = () => {
       </View>
       {showCalendar && (
         <View style={styles.calendarContainer}>
-          <Calendar markedDates={markedDates} />
+          <Calendar markedDates={markedDate3} />
         </View>
       )}
-      <StudentSidebar
+      <Sidebar
         isOpen={isSidebarOpen}
         onClose={toggleSidebar}
         navigation={navigation}
@@ -238,7 +387,16 @@ const StudentScheduleScreen = () => {
       <View style={styles.maincont2}>
         {!availableSem ? (
           <View style={styles.inputContainer}>
-            <Text>No Current Semester</Text>
+            <TextInput
+              style={styles.inputDays}
+              placeholder="no of days this sem?"
+              value={number}
+              onChangeText={handleInputChange}
+              keyboardType="numeric"
+            />
+            <TouchableOpacity onPress={handleSave}>
+              <Text style={styles.saveButton}>Save</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.dateRanges}>
@@ -259,6 +417,11 @@ const StudentScheduleScreen = () => {
             </View>
             <View style={styles.QrContainer}>
               <Text style={styles.dateTitle}>Semester Range</Text>
+              <TouchableOpacity
+                onPress={() => handleQRCodePress(availableSem.code)}
+              >
+                <Ionicons name="qr-code-outline" size={24} color="black" />
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -281,31 +444,97 @@ const StudentScheduleScreen = () => {
                 schedules={events.filter(
                   (event) => event.day === moment(date).format("dddd")
                 )}
+                codes={codes}
+                fetchData={fetchData}
               />
             ))}
           </View>
         </View>
       </View>
-      <View style={styles.maincont}>
-        <View style={styles.dateContainer}>
-          {getCurrentWeekDates().map((date, index) => (
-            <View key={index} style={styles.dateItem}>
-              <Text style={styles.dateLabel}>{moment(date).format("ddd")}</Text>
-              <Text>{moment(date).format("MMM DD")}</Text>
-            </View>
-          ))}
+
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setModalVisible(true)}
+      >
+        <View style={styles.addButtonIcon}>
+          <Ionicons name="add" size={50} color="white" />
         </View>
-        <View style={styles.eventsContainer}>
-          {getCurrentWeekDates().map((date, index) => (
-            <CalendarEvent
-              key={index}
-              schedules={events.filter(
-                (event) => event.day === moment(date).format("dddd")
-              )}
+      </TouchableOpacity>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer2}>
+          <View style={styles.modalContent2}>
+            {/* Header */}
+            <TouchableOpacity
+              style={styles.closeButton2}
+              onPress={() => setModalVisible(false)}
+            >
+              <Ionicons name="close" size={24} color="black" />
+            </TouchableOpacity>
+            <Text style={styles.modalHeader}>Create a Schedule</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Input day of the scheule"
+              value={day}
+              onChangeText={(text) => setDay(text)}
             />
-          ))}
+
+            {/* Start Time Input */}
+            <TextInput
+              style={styles.input}
+              placeholder="Start Time (use military time format)"
+              value={startTime}
+              onChangeText={(text) => setStartTime(text)}
+            />
+            {/* End Time Input */}
+            <TextInput
+              style={styles.input}
+              placeholder="End Time (use military time format)"
+              value={endTime}
+              onChangeText={(text) => setEndTime(text)}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Subject Description"
+              value={description}
+              onChangeText={(text) => setDescription(text)}
+            />
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmit}
+            >
+              <Text style={styles.submitButtonText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </Modal>
+
+      {/* QR CODE MODAL */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalQRVisible}
+        onRequestClose={() => setModalQRVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <QRCode value={QRValue} size={200} />
+            <TouchableOpacity
+              style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
+              onPress={() => setModalQRVisible(false)}
+            >
+              <Text style={styles.textStyle}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal
         visible={modalVisible5}
         animationType="slide"
@@ -330,6 +559,15 @@ const StudentScheduleScreen = () => {
         </View>
       </Modal>
 
+
+      {/* SNACK BAR FOR MESSAGE POP UP */}
+      <Snackbar
+        visible={visible}
+        onDismiss={() => setVisible(false)}
+        duration={3000}
+      >
+        {message}
+      </Snackbar>
     </View>
   );
 };
@@ -339,7 +577,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 5,
   },
   maincont2: {
     flexDirection: "column",
@@ -415,9 +653,11 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontWeight: "bold",
+    marginLeft: 5,
   },
   iconContainer: {
     padding: 10,
+    marginHorizontal: 5,
   },
   calendarDropdown: {
     padding: 10,
@@ -434,9 +674,7 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
     paddingHorizontal: 10,
   },
-  iconContainer: {
-    marginHorizontal: 5,
-  },
+
   modalContainer: {
     flex: 1,
     justifyContent: "center",
@@ -478,7 +716,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "gray",
+    backgroundColor: "orange",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -513,7 +751,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   submitButton: {
-    backgroundColor: "#9AC8CD",
+    backgroundColor: "blue",
     padding: 10,
     marginTop: 10,
     borderRadius: 5,
@@ -523,7 +761,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
-  closeButton: {
+  closeButton2: {
     position: "absolute",
     top: 10,
     right: 10,
@@ -632,24 +870,62 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: "center",
   },
-  statuslabel: {
-    color: "gray",
-    marginLeft: 5,
-    fontSize: 12,
-  },
-  additional: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   scheduleItem: {
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "flex-start",
   },
+  popup: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  optionModalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  optionItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+  },
+  optionText: {
+    fontSize: 16,
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: "blue",
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  additional: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  statuslabel: {
+    color: "gray",
+    marginLeft: 5,
+    fontSize: 12,
+  },
+
   notificationBadge: {
     position: "absolute",
-    bottom: 8,
-    left: 10,
+    top: 5,
+    right: 5,
     backgroundColor: "red",
     borderRadius: 10,
     paddingHorizontal: 6,
@@ -684,4 +960,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default StudentScheduleScreen;
+export default AdminViewProfSchedScreen;

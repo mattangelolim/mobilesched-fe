@@ -35,6 +35,14 @@ export default function LoginScreen({ navigation }) {
             index: 0,
             routes: [{ name: "Home" }],
           });
+        } else if (response.data.loginUser.user_type === "Admin") {
+          setMessage("Login successful");
+          setVisible(true);
+          navigation.navigate("AdminHome");
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "AdminHome" }],
+          });
         } else {
           setMessage("Login successful");
           setVisible(true);
@@ -89,6 +97,15 @@ export default function LoginScreen({ navigation }) {
           Don't have an account? Register here
         </Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => navigation.navigate("ForgotPassword")}
+        style={styles.registerBtn}
+      >
+        <Text style={styles.pwText}>
+          Forgot Password
+        </Text>
+      </TouchableOpacity>
+
       <Snackbar
         visible={visible}
         onDismiss={() => setVisible(false)}
@@ -106,6 +123,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffff",
     alignItems: "center",
     justifyContent: "center",
+  },
+  pwText: {
+    textDecorationLine: 'underline',
+    color: "#003f5c",
+    textAlign: 'center',
   },
   logo: {
     fontWeight: "bold",
