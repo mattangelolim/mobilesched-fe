@@ -19,11 +19,13 @@ import Sidebar from "../component/sidebar";
 import { useNavigation } from "@react-navigation/native";
 import { useRoute } from "@react-navigation/native";
 
-const CalendarEvent = ({ codes, schedules, fetchData }) => {
+const CalendarEvent = ({ day, schedules, fetchData, codes }) => {
   const [modalVisible, setModalVisible] = useState(false);
   // const [selectedSchedule, setSelectedSchedule] = useState(null); // State to manage selected schedule
   // const [selectedOption, setSelectedOption] = useState(null); // State to manage selected option
   const [selectedOpen, setSelectedOpen] = useState(null);
+  const [isOthersSelected, setIsOthersSelected] = useState(false);
+  const [customOption, setCustomOption] = useState("");
   const displaySchedules = schedules.slice(0, 2);
   const moreSchedules = schedules.length > 2;
 
@@ -32,12 +34,21 @@ const CalendarEvent = ({ codes, schedules, fetchData }) => {
     { id: 2, label: "Asynchronous Class" },
     { id: 3, label: "No Classes" },
     { id: 4, label: "Face to Face Meeting" },
+    { id: 5, label: "Others" },
   ];
 
   const handleOptionSelect = async (option) => {
+    let status;
+
+    if (option === "Others") {
+      status = customOption;
+    } else {
+      status = option;
+    }
+
     const data = {
       id: selectedOpen,
-      status: option,
+      status: status,
     };
 
     try {
@@ -48,10 +59,9 @@ const CalendarEvent = ({ codes, schedules, fetchData }) => {
 
       if (response.status === 201) {
         setSelectedOpen(null);
+        setIsOthersSelected(false);
+        setCustomOption("");
         fetchData(codes);
-
-        console.log("Response:", response.data);
-        console.log("Status updated successfully");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -135,16 +145,41 @@ const CalendarEvent = ({ codes, schedules, fetchData }) => {
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.optionItem}
-                      onPress={() => handleOptionSelect(item.label)}
+                      onPress={() => {
+                        if (item.label === "Others") {
+                          setIsOthersSelected(true);
+                        } else {
+                          handleOptionSelect(item.label);
+                        }
+                      }}
                     >
                       <Text>{item.label}</Text>
                     </TouchableOpacity>
                   )}
                   keyExtractor={(item) => item.id.toString()}
                 />
+                {isOthersSelected && (
+                  <>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Enter custom option"
+                      value={customOption}
+                      onChangeText={(text) => setCustomOption(text)}
+                    />
+                    <TouchableOpacity
+                      style={styles.submitButton}
+                      onPress={() => handleOptionSelect("Others")}
+                    >
+                      <Text style={styles.submitButtonText}>Submit</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
                 <TouchableOpacity
                   style={styles.closeButton}
-                  onPress={() => setSelectedOpen(null)}
+                  onPress={() => {
+                    setIsOthersSelected(false);
+                    setSelectedOpen(null);
+                  }}
                 >
                   <Text style={styles.closeButtonText}>Cancel</Text>
                 </TouchableOpacity>

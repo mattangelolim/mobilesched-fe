@@ -12,6 +12,7 @@ const StudentListScreen = ({ navigation }) => {
     const [searchVisible, setSearchVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredProfessors, setFilteredProfessors] = useState([]);
+    const [editable, setEditable] = useState(false)
 
     const toggleCalendar = () => {
         setShowCalendar(!showCalendar);
@@ -33,6 +34,16 @@ const StudentListScreen = ({ navigation }) => {
             console.error("Error fetching professors:", error);
         }
     };
+    const handleDeleteProf = (scheduleCode) => {
+        try {
+            const response = axios.post(`http://3.26.19.203/delete/user/?code=${scheduleCode}`)
+            if (response) {
+                fetchStudents()
+            }
+        } catch (error) {
+            console.error("Error deleting:", error);
+        }
+    }
 
     useEffect(() => {
         fetchStudents();
@@ -47,12 +58,19 @@ const StudentListScreen = ({ navigation }) => {
     }, [searchQuery, professors]);
 
     const renderProfessorItem = ({ item }) => (
+
         <TouchableOpacity style={styles.professorItem}>
             <Text style={styles.professorName}>Student's Name: {item.name}</Text>
             <Text>Email: {item.email}</Text>
             <Text>Username: {item.username}</Text>
             <Text>Code: {item.code}</Text>
+            {editable && (
+                <TouchableOpacity onPress={() => handleDeleteProf(item.code)}>
+                    <Ionicons name="trash" size={24} color="red" />
+                </TouchableOpacity>
+            )}
         </TouchableOpacity>
+
     );
 
     return (
@@ -72,7 +90,7 @@ const StudentListScreen = ({ navigation }) => {
                     <TouchableOpacity style={styles.iconContainer} onPress={toggleSearch}>
                         <Ionicons name="search" size={24} color="orange" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconContainer}>
+                    <TouchableOpacity  style={styles.iconContainer} onPress={() => setEditable(!editable)}>
                         <Ionicons name="person-circle" size={24} color="orange" />
                     </TouchableOpacity>
                 </View>
@@ -143,7 +161,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     modalContainer: {
-        flex: 1, 
+        flex: 1,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "white",
@@ -168,7 +186,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-around",
         width: "100%",
         marginTop: 20,
-    },
+    }
 });
 
 export default StudentListScreen;

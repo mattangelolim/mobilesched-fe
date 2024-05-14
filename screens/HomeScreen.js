@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Modal,
   FlatList,
+  TextInput
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Calendar } from "react-native-calendars";
@@ -16,11 +17,13 @@ import QRCode from "react-native-qrcode-svg";
 import Sidebar from "../component/sidebar";
 import { useNavigation } from "@react-navigation/native";
 
-const CalendarEvent = ({ day, schedules, fetchData }) => {
+const CalendarEvent = ({ day, schedules, fetchData, code }) => {
   const [modalVisible, setModalVisible] = useState(false);
   // const [selectedSchedule, setSelectedSchedule] = useState(null); // State to manage selected schedule
   // const [selectedOption, setSelectedOption] = useState(null); // State to manage selected option
   const [selectedOpen, setSelectedOpen] = useState(null);
+  const [isOthersSelected, setIsOthersSelected] = useState(false);
+  const [customOption, setCustomOption] = useState("");
   const displaySchedules = schedules.slice(0, 2);
   const moreSchedules = schedules.length > 2;
 
@@ -29,12 +32,21 @@ const CalendarEvent = ({ day, schedules, fetchData }) => {
     { id: 2, label: "Asynchronous Class" },
     { id: 3, label: "No Classes" },
     { id: 4, label: "Face to Face Meeting" },
+    { id: 5, label: "Others" },
   ];
 
   const handleOptionSelect = async (option) => {
+    let status;
+
+    if (option === "Others") {
+      status = customOption;
+    } else {
+      status = option;
+    }
+
     const data = {
       id: selectedOpen,
-      status: option,
+      status: status,
     };
 
     try {
@@ -45,10 +57,9 @@ const CalendarEvent = ({ day, schedules, fetchData }) => {
 
       if (response.status === 201) {
         setSelectedOpen(null);
+        setIsOthersSelected(false);
+        setCustomOption("");
         fetchData();
-
-        // console.log("Response:", response.data);
-        // console.log("Status updated successfully");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -132,16 +143,41 @@ const CalendarEvent = ({ day, schedules, fetchData }) => {
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.optionItem}
-                      onPress={() => handleOptionSelect(item.label)}
+                      onPress={() => {
+                        if (item.label === "Others") {
+                          setIsOthersSelected(true);
+                        } else {
+                          handleOptionSelect(item.label);
+                        }
+                      }}
                     >
                       <Text>{item.label}</Text>
                     </TouchableOpacity>
                   )}
                   keyExtractor={(item) => item.id.toString()}
                 />
+                {isOthersSelected && (
+                  <>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Enter custom option"
+                      value={customOption}
+                      onChangeText={(text) => setCustomOption(text)}
+                    />
+                    <TouchableOpacity
+                      style={styles.submitButton}
+                      onPress={() => handleOptionSelect("Others")}
+                    >
+                      <Text style={styles.submitButtonText}>Submit</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
                 <TouchableOpacity
                   style={styles.closeButton}
-                  onPress={() => setSelectedOpen(null)}
+                  onPress={() => {
+                    setIsOthersSelected(false);
+                    setSelectedOpen(null);
+                  }}
                 >
                   <Text style={styles.closeButtonText}>Cancel</Text>
                 </TouchableOpacity>
@@ -611,7 +647,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   submitButton: {
-    backgroundColor: "#9AC8CD",
+    backgroundColor: "blue",
     padding: 10,
     marginTop: 10,
     borderRadius: 5,

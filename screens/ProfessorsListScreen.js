@@ -69,7 +69,7 @@ const ProfessorListScreen = ({ navigation }) => {
         try {
             const response = await axios.post("http://3.26.19.203/register/user", formData);
 
-            if(response.status === 200){
+            if (response.status === 200) {
                 setIsModalVisible(false)
                 fetchProfessors();
             }
@@ -78,17 +78,35 @@ const ProfessorListScreen = ({ navigation }) => {
         }
     };
 
-    const navigateToViewSchedule = (scheduleCode, name ) => {
-        navigation.navigate("AdminViewProfSched", { code: scheduleCode, name:name});
-      };
+    const navigateToViewSchedule = (scheduleCode, name) => {
+        navigation.navigate("AdminViewProfSched", { code: scheduleCode, name: name });
+    };
+    const handleDeleteProf = (scheduleCode) => {
+        try {
+            const response = axios.post(`http://3.26.19.203/delete/user/?code=${scheduleCode}`)
+            if (response) {
+                fetchProfessors()
+            }
+        } catch (error) {
+            console.error("Error deleting:", error);
+        }
+    }
 
     const renderProfessorItem = ({ item }) => (
-        <TouchableOpacity style={styles.professorItem} onPress={() => navigateToViewSchedule(item.code, item.name)}>
+        <View style={styles.professorItem}>
             <Text style={styles.professorName}>Professor's Name: {item.name}</Text>
             <Text>Email: {item.email}</Text>
             <Text>Username: {item.username}</Text>
             <Text>Code: {item.code}</Text>
-        </TouchableOpacity>
+            <View style={styles.iconContainer2}>
+                <TouchableOpacity onPress={() => navigateToViewSchedule(item.code, item.name)}>
+                    <Ionicons name="eye" size={24} color="blue" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDeleteProf(item.code)}>
+                    <Ionicons name="trash" size={24} color="red" />
+                </TouchableOpacity>
+            </View>
+        </View>
     );
 
     return (
@@ -214,7 +232,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     modalContainer: {
-        flex: 1, 
+        flex: 1,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "white",
@@ -240,6 +258,12 @@ const styles = StyleSheet.create({
         width: "100%",
         marginTop: 20,
     },
+    iconContainer2: {
+        flexDirection: "row",
+        marginTop: 10,
+        justifyContent: "space-around",
+        width: "25%",
+    }
 });
 
 export default ProfessorListScreen;
