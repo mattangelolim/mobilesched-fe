@@ -13,6 +13,7 @@ import axios from "axios";
 export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [studentNum, setStudentNum] = useState("")
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   // const [userType, setUserType] = useState("Student");
@@ -22,7 +23,8 @@ export default function RegisterScreen({ navigation }) {
   const handleRegister = async () => {
     try {
   
-      const response = await axios.post("http://3.26.19.203/register/user", {
+      console.log(studentNum)
+      const response = await axios.post(`http://3.26.19.203/register/user?student_no=${studentNum}`, {
         name,
         email,
         username,
@@ -53,6 +55,15 @@ export default function RegisterScreen({ navigation }) {
           placeholderTextColor="#003f5c"
           value={name}
           onChangeText={setName}
+        />
+      </View>
+      <View style={styles.inputView}>
+        <TextInput
+          style={styles.inputText}
+          placeholder="Student No."
+          placeholderTextColor="#003f5c"
+          value={studentNum}
+          onChangeText={setStudentNum}
         />
       </View>
       <View style={styles.inputView}>

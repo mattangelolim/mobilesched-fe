@@ -35,7 +35,7 @@ const CalendarEvent = ({ day, schedules, fetchData, code }) => {
     { id: 5, label: "Others" },
   ];
 
-  const handleOptionSelect = async (option) => {
+  const handleOptionSelect = async (option, statusCheck) => {
     let status;
 
     if (option === "Others") {
@@ -50,10 +50,12 @@ const CalendarEvent = ({ day, schedules, fetchData, code }) => {
     };
 
     try {
-      const response = await axios.post(
-        "http://3.26.19.203/create/status",
-        data
-      );
+      let response;
+      if (statusCheck !== null) {
+        response = await axios.post("http://3.26.19.203/update/status", data);
+      } else {
+        response = await axios.post("http://3.26.19.203/create/status", data);
+      }
 
       if (response.status === 201) {
         setSelectedOpen(null);
@@ -98,7 +100,7 @@ const CalendarEvent = ({ day, schedules, fetchData, code }) => {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.scheduleItem}
-                // onPress={() => setSelectedSchedule(item)}
+                  onPress={() => setSelectedOpen(item.id, item.status)}
                 >
                   <View style={styles.additional}>
                     {item.status === null ? (

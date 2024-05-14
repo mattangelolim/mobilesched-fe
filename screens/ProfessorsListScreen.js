@@ -20,6 +20,7 @@ const ProfessorListScreen = ({ navigation }) => {
     const [searchVisible, setSearchVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredProfessors, setFilteredProfessors] = useState([]);
+    const [editable, setEditable] = useState(false)
 
     const handleChange = (name, value) => {
         setFormData({
@@ -98,14 +99,16 @@ const ProfessorListScreen = ({ navigation }) => {
             <Text>Email: {item.email}</Text>
             <Text>Username: {item.username}</Text>
             <Text>Code: {item.code}</Text>
-            <View style={styles.iconContainer2}>
-                <TouchableOpacity onPress={() => navigateToViewSchedule(item.code, item.name)}>
-                    <Ionicons name="eye" size={24} color="blue" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDeleteProf(item.code)}>
-                    <Ionicons name="trash" size={24} color="red" />
-                </TouchableOpacity>
-            </View>
+            {editable && (
+                <View style={styles.iconContainer2}>
+                    <TouchableOpacity onPress={() => navigateToViewSchedule(item.code, item.name)}>
+                        <Ionicons name="eye" size={24} color="blue" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteProf(item.code)}>
+                        <Ionicons name="trash" size={24} color="red" />
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 
@@ -125,6 +128,9 @@ const ProfessorListScreen = ({ navigation }) => {
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.iconContainer} onPress={toggleSearch}>
                         <Ionicons name="search" size={24} color="orange" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.iconContainer} onPress={() =>{setEditable(!editable)}}>
+                        <Ionicons name="person-circle" size={24} color="orange" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.iconContainer} onPress={toggleModal}>
                         <Ionicons name="add" size={24} color="orange" />
@@ -211,7 +217,7 @@ const styles = StyleSheet.create({
         marginBottom: 5,
     },
     iconContainer: {
-        padding: 10,
+        padding: 4,
     },
     header: {
         flexDirection: "row",
